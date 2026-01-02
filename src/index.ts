@@ -3,8 +3,8 @@ import 'dotenv/config';
 import { Client, Events, GatewayIntentBits, type Message, Partials } from 'discord.js';
 
 import { appendContext, getContext } from './bot/context-store';
+import { initSchema } from './db/schema';
 import { askModel } from './services/ask';
-import { openai, SYSTEM_PROMPT } from './services/openai';
 
 const token = process.env.DISCORD_TOKEN;
 if (!token) throw new Error('DISCORD_TOKEN is missing');
@@ -79,4 +79,6 @@ client.on(Events.MessageCreate, async (message: Message) => {
   }
 });
 
+initSchema();
+console.log('✅ DB schema initialized');
 client.login(token);
