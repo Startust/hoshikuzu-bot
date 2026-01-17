@@ -17,7 +17,7 @@ async function main() {
   console.log('✅ DB schema initialized');
 
   const client = new HoshikuzuClient();
-  client.once('ready', () => {
+  client.once('clientReady', () => {
     console.log(`Ready! Logged in as ${client.user?.tag}`);
     startFlyffPoller(client);
   });
