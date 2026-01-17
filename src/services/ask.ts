@@ -1,5 +1,5 @@
-import type { ChatMessage } from '../bot/context-store';
-import { openai, SYSTEM_PROMPT } from './openai';
+import type { ChatMessage } from '../bot/context-store.js';
+import { openai, SYSTEM_PROMPT } from './openai.js';
 
 function normalizeText(s: unknown) {
   return typeof s === 'string' ? s.trim() : '';

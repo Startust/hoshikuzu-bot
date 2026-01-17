@@ -1,9 +1,7 @@
-import { getDb } from './client.js';
-
+import { getDb } from './client';
 export async function initSchema() {
-  const db = await getDb();
-
-  await db.exec(`
+    const db = await getDb();
+    await db.exec(`
     CREATE TABLE IF NOT EXISTS page_cache (
       url TEXT PRIMARY KEY,
       source TEXT NOT NULL,
@@ -65,3 +63,4 @@ export async function initSchema() {
       ON ranking_snapshot(discord_guild_id, flyff_server_id);
   `);
 }
+//# sourceMappingURL=schema.js.map

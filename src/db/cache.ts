@@ -1,4 +1,4 @@
-import { getDb } from './client';
+import { getDb } from './client.js';
 
 function nowMs() {
   return Date.now();
