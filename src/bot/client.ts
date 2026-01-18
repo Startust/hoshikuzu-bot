@@ -6,6 +6,7 @@ import { GatewayIntentBits, Partials } from 'discord.js';
 export class HoshikuzuClient extends SapphireClient {
   public constructor() {
     const isProd = process.env.NODE_ENV === 'production';
+    console.log(`Starting in ${isProd ? 'production' : 'development'} mode`);
 
     super({
       baseUserDirectory: join(process.cwd(), isProd ? 'dist' : 'src'),

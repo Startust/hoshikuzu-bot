@@ -1,5 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command } from '@sapphire/framework';
+import type { Command } from '@sapphire/framework';
+import { Subcommand } from '@sapphire/plugin-subcommands';
 import { ChannelType } from 'discord.js';
 
 import { fetchAllPlayers } from '../services/flyffRanking/scrape.js';
@@ -9,27 +10,31 @@ import { getConfig, upsertConfig } from '../services/flyffRanking/store.js';
   name: 'rank',
   description: 'Flyff 排行榜监控',
 })
-export class RankCommand extends Command {
+export class RankCommand extends Subcommand {
   public override registerApplicationCommands(registry: Command.Registry) {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName('rank')
-        .setDescription('Flyff 排行榜监控')
-        .addSubcommand((sc) =>
-          sc
-            .setName('channel')
-            .setDescription('设置推送频道')
-            .addChannelOption((o) =>
-              o
-                .setName('target')
-                .setDescription('推送到哪个频道')
-                .addChannelTypes(ChannelType.GuildText)
-                .setRequired(true),
-            ),
-        )
-        .addSubcommand((sc) =>
-          sc.setName('now').setDescription('立刻抓取一次（调试用）'),
-        ),
+    registry.registerChatInputCommand(
+      (builder) =>
+        builder
+          .setName('rank')
+          .setDescription('Flyff 排行榜监控')
+          .addSubcommand((sc) =>
+            sc
+              .setName('channel')
+              .setDescription('设置推送频道')
+              .addChannelOption((o) =>
+                o
+                  .setName('target')
+                  .setDescription('推送到哪个频道')
+                  .addChannelTypes(ChannelType.GuildText)
+                  .setRequired(true),
+              ),
+          )
+          .addSubcommand((sc) =>
+            sc.setName('now').setDescription('立刻抓取一次（调试用）'),
+          ),
+      {
+        guildIds: [process.env.DEV_GUILD_ID!],
+      },
     );
   }
 

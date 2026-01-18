@@ -19,7 +19,32 @@ async function main() {
   const client = new HoshikuzuClient();
   client.once('clientReady', () => {
     console.log(`Ready! Logged in as ${client.user?.tag}`);
+    console.log('NODE_ENV', process.env.NODE_ENV);
+    console.log('Loaded command keys:', [...client.stores.get('commands').keys()]);
+    console.log('Listeners loaded:', client.stores.get('listeners')?.size);
     startFlyffPoller(client);
+  });
+
+  client.on('applicationCommandRegistriesRegistered', async () => {
+    const { REST, Routes } = await import('discord.js');
+    const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
+
+    const cmds = (await rest.get(
+      Routes.applicationGuildCommands(process.env.CLIENT_ID!, process.env.DEV_GUILD_ID!),
+    )) as any[];
+
+    console.log(
+      'Guild commands now:',
+      cmds.map((c) => `${c.name}(${c.id})`),
+    );
+  });
+
+  client.on('applicationCommandRegistriesSkipped', (...args) => {
+    console.log('[ACR SKIPPED]', ...args);
+  });
+
+  client.on('applicationCommandRegistriesError', (...args) => {
+    console.error('[ACR ERROR]', ...args);
   });
 
   await client.login(token);

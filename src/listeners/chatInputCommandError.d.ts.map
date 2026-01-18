@@ -1,1 +1,0 @@
-{"version":3,"file":"chatInputCommandError.d.ts","sourceRoot":"","sources":["chatInputCommandError.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,QAAQ,EAAE,MAAM,qBAAqB,CAAC;AAE/C,qBAAa,6BAA8B,SAAQ,QAAQ;gBACtC,GAAG,EAAE,QAAQ,CAAC,aAAa,EAAE,OAAO,EAAE,QAAQ,CAAC,OAAO;IAIlE,GAAG,CAAC,KAAK,EAAE,OAAO,EAAE,OAAO,EAAE,GAAG;CAIxC"}
