@@ -70,3 +70,32 @@ model RankingSnapshot {
   @@index([flyffServerId, rank], name: "idx_server_rank")
   @@map("ranking_snapshot")
 }
+
+model RankingEvent {
+  id            BigInt @id @default(autoincrement())
+  flyffServerId Int    @map("flyff_server_id")
+  eventType     String @map("event_type") @db.VarChar(16) // "guild" | "rename"
+
+  // 对 guild 变动：username 有意义；对 rename：beforeName/afterName 有意义
+  username    String? @db.VarChar(64)
+  beforeValue String? @map("before_value") @db.VarChar(128)
+  afterValue  String? @map("after_value") @db.VarChar(128)
+
+  // rename 专用
+  beforeName String? @map("before_name") @db.VarChar(64)
+  afterName  String? @map("after_name") @db.VarChar(64)
+  score      Int?
+  reasonJson String? @map("reason_json") @db.LongText
+
+  // 可选：把当时的快照信息也记录一下，历史展示更有内容
+  rank           Int?
+  level          Int?
+  job            String? @db.VarChar(32)
+  flyffGuildName String? @map("flyff_guild_name") @db.VarChar(64)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+
+  @@index([flyffServerId, createdAt], name: "idx_event_server_time")
+  @@index([flyffServerId, username, createdAt], name: "idx_event_user_time")
+  @@map("ranking_event")
+}

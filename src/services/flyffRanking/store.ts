@@ -1,4 +1,6 @@
 import { prisma } from '../../db/prisma.js';
+import type { Change } from './diff';
+import type { ScrapedPlayer } from './scrape';
 
 export type RankingConfig = {
   discordGuildId: string;
@@ -163,4 +165,103 @@ export async function listAllConfigs(): Promise<RankingConfig[]> {
     flyffServerId: r.flyffServerId ?? 23,
     enabled: true,
   }));
+}
+
+export async function appendEvents(
+  flyffServerId: number,
+  changes: Change[], // 你 diff 的类型
+  latestByUsername: Map<string, ScrapedPlayer>, // 可选：补充 rank/level/job
+) {
+  if (!changes.length) return;
+
+  await prisma.rankingEvent.createMany({
+    data: changes.map((c) => {
+      if (c.type === 'guild') {
+        const p = latestByUsername.get(c.username);
+        return {
+          flyffServerId,
+          eventType: 'guild',
+          username: c.username,
+          beforeValue: c.before ?? null,
+          afterValue: c.after ?? null,
+          rank: p?.rank ?? null,
+          level: p?.level ?? null,
+          job: p?.job ?? null,
+          flyffGuildName: p?.flyffGuildName ?? null,
+        };
+      }
+      // rename
+      return {
+        flyffServerId,
+        eventType: 'suspected-rename',
+        beforeName: c.beforeName,
+        afterName: c.afterName,
+        score: c.score ?? null,
+        reasonJson: JSON.stringify(c.reason ?? []),
+        beforeValue: c.beforeGuild ?? null,
+        afterValue: c.afterGuild ?? null,
+      };
+    }),
+  });
+}
+
+export type GuildHistoryRow = {
+  createdAt: Date;
+  eventType: 'guild' | 'suspected-rename';
+  username: string | null;
+  beforeValue: string | null;
+  afterValue: string | null;
+  beforeName: string | null;
+  afterName: string | null;
+  score: number | null;
+  reasonJson: string | null;
+  rank: number | null;
+  level: number | null;
+  job: string | null;
+};
+
+export async function listGuildHistoryEvents(params: {
+  flyffServerId: number;
+  guildName: string;
+  limit: number;
+}): Promise<GuildHistoryRow[]> {
+  const { flyffServerId, guildName } = params;
+  const limit = Math.min(Math.max(params.limit, 1), 50);
+
+  const rows = await prisma.rankingEvent.findMany({
+    where: {
+      flyffServerId,
+      OR: [
+        // guild-change: before/after 命中
+        {
+          eventType: 'guild',
+          OR: [{ beforeValue: guildName }, { afterValue: guildName }],
+        },
+
+        // suspected-rename: 也用 beforeValue/afterValue 存公会前/后，所以同样筛
+        {
+          eventType: 'suspected-rename',
+          OR: [{ beforeValue: guildName }, { afterValue: guildName }],
+        },
+      ],
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    select: {
+      createdAt: true,
+      eventType: true,
+      username: true,
+      beforeValue: true,
+      afterValue: true,
+      beforeName: true,
+      afterName: true,
+      score: true,
+      reasonJson: true,
+      rank: true,
+      level: true,
+      job: true,
+    },
+  });
+
+  return rows as any;
 }

@@ -1,9 +1,14 @@
 import type { SapphireClient } from '@sapphire/framework';
 import { ChannelType } from 'discord.js';
 
-import { diffByUsername } from '../services/flyffRanking/diff.js';
+import {
+  type Change,
+  diffByUsername,
+  filterChangesByWatched,
+} from '../services/flyffRanking/diff.js';
 import { fetchAllPlayers } from '../services/flyffRanking/scrape.js';
 import {
+  appendEvents,
   listAllConfigs, // 新增：返回所有有配置的 guild（哪怕没 enabled）
   listWatchedGuilds,
   loadSnapshot,
@@ -56,13 +61,22 @@ async function scanServerAndNotifyGuilds(
     `[flyff poller] scanning server=${serverId} at ${new Date().toISOString()}`,
   );
 
-  // A) 读取旧快照 + 抓最新榜单
   const oldSnap = await loadSnapshot(serverId);
   const latest = await fetchAllPlayers(serverId);
 
   console.log(`[flyff poller] server=${serverId} fetched ${latest.length} players`);
 
-  // B) 先更新快照（无论是否推送）
+  // ✅ 1) 全量 diff + 记录事件（不看 watched/config）
+  const allChanges = diffByUsername(oldSnap, latest);
+  if (allChanges.length) {
+    const latestByUsername = new Map(latest.map((p) => [p.username, p]));
+    await appendEvents(serverId, allChanges, latestByUsername);
+    console.log(
+      `[flyff poller] server=${serverId} recorded ${allChanges.length} changes`,
+    );
+  }
+
+  // ✅ 2) 更新快照（无论是否推送）
   await saveSnapshot(
     serverId,
     latest.map((p) => ({
@@ -76,11 +90,10 @@ async function scanServerAndNotifyGuilds(
     })),
   );
 
-  // C) 针对这个 server 上的每个 discord guild 配置，决定是否推送
+  // ✅ 3) 推送：仍然只给有配置的 guild 推（因为要知道 channel）
   const guildConfigs = allConfigs.filter((c) => (c.flyffServerId ?? 23) === serverId);
-
   for (const cfg of guildConfigs) {
-    await maybeNotifyGuild(client, cfg, oldSnap, latest);
+    await maybeNotifyGuild(client, cfg, allChanges);
   }
 }
 
@@ -91,8 +104,7 @@ async function maybeNotifyGuild(
     notifyChannelId: string | null;
     flyffServerId: number;
   },
-  oldSnap: Awaited<ReturnType<typeof loadSnapshot>>,
-  latest: Awaited<ReturnType<typeof fetchAllPlayers>>,
+  allChanges: Change[],
 ) {
   // 没设推送频道就不发（但扫描和快照已完成）
   if (!cfg.notifyChannelId) return;
@@ -104,7 +116,7 @@ async function maybeNotifyGuild(
   if (watched.size === 0) return;
 
   // 用 watched 过滤计算差异（现有逻辑）
-  const changes = diffByUsername(oldSnap, latest, watched);
+  const changes = filterChangesByWatched(allChanges, watched); // ✅ O(changes) 过滤
   if (!changes.length) return;
 
   const channel = await client.channels.fetch(cfg.notifyChannelId).catch(() => null);

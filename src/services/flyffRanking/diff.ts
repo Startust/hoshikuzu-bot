@@ -9,29 +9,42 @@ export type Change =
       afterName: string;
       score: number;
       reason: string[];
+      beforeGuild: string | null;
+      afterGuild: string | null;
     };
+
+function isWatchedRelated(
+  watchedGuilds: Set<string> | undefined,
+  before: string | null,
+  after: string | null,
+) {
+  // watchedGuilds 未传 => 全量
+  if (!watchedGuilds) return true;
+
+  // watchedGuilds 为空 => 你原逻辑是“不过滤”（等同全量）
+  if (watchedGuilds.size === 0) return true;
+
+  return watchedGuilds.has(before ?? '') || watchedGuilds.has(after ?? '');
+}
 
 export function diffByUsername(
   oldMap: Map<string, PlayerRow>,
   latest: ScrapedPlayer[],
-  watchedGuilds: Set<string>,
+  watchedGuilds?: Set<string>,
 ): Change[] {
   const changes: Change[] = [];
 
   const latestMap = new Map(latest.map((p) => [p.username, p]));
-  // 1) 确定：同名公会变化
+  // 1) 同名公会变化
   for (const [username, old] of oldMap.entries()) {
     const now = latestMap.get(username);
     if (!now) continue;
 
     const before = old.flyffGuildName ?? null;
     const after = now.flyffGuildName ?? null;
+
     if (before !== after) {
-      if (
-        watchedGuilds.size === 0 ||
-        watchedGuilds.has(before ?? '') ||
-        watchedGuilds.has(after ?? '')
-      ) {
+      if (isWatchedRelated(watchedGuilds, before, after)) {
         changes.push({ type: 'guild', username, before, after });
       }
     }
@@ -41,9 +54,7 @@ export function diffByUsername(
     `[diff] found ${changes.length} guild changes, checking for suspected renames...`,
   );
 
-  // 2) 可选：疑似改名（基于特征匹配）
-  // 只有当你确实想要“改名提醒”，才开启这个逻辑
-  // 这里默认开启且阈值较高，避免误报
+  // 2) 疑似改名（不传 watched => 全量记录）
   const disappeared: PlayerRow[] = [];
   const appeared: ScrapedPlayer[] = [];
 
@@ -91,20 +102,18 @@ export function diffByUsername(
     }
 
     if (best && best.score >= threshold) {
-      // 只在关注公会相关时发（从/到关注公会）
-      const beforeG = old.flyffGuildName ?? '';
-      const afterG = best.p.flyffGuildName ?? '';
-      const related =
-        watchedGuilds.size === 0 ||
-        watchedGuilds.has(beforeG) ||
-        watchedGuilds.has(afterG);
-      if (related) {
+      const beforeG = old.flyffGuildName ?? null;
+      const afterG = best.p.flyffGuildName ?? null;
+
+      if (isWatchedRelated(watchedGuilds, beforeG, afterG)) {
         changes.push({
           type: 'suspected-rename',
           beforeName: old.username,
           afterName: best.p.username,
           score: best.score,
           reason: best.reason,
+          beforeGuild: beforeG,
+          afterGuild: afterG,
         });
       }
     }
@@ -115,4 +124,15 @@ export function diffByUsername(
   );
 
   return changes;
+}
+
+export function filterChangesByWatched(changes: Change[], watched: Set<string>) {
+  if (watched.size === 0) return changes;
+
+  return changes.filter((c) => {
+    if (c.type === 'guild') {
+      return watched.has(c.before ?? '') || watched.has(c.after ?? '');
+    }
+    return watched.has(c.beforeGuild ?? '') || watched.has(c.afterGuild ?? '');
+  });
 }
