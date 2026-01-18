@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model PageCache {
+  url       String   @id @db.VarChar(768)
+  source    String   @db.VarChar(64)
+  title     String?  @db.VarChar(512)
+  text      String   @db.LongText
+  fetchedAt DateTime @default(now()) @map("fetched_at") @db.DateTime(3)
+  ttlMs     Int      @map("ttl_ms") // 如果 ttl 可能 > 24 天（ms 超 2^31），用 BigInt
+
+  @@index([source], name: "idx_page_cache_source")
+  @@map("page_cache")
+}
+
+model SearchCache {
+  source      String   @db.VarChar(64)
+  query       String   @db.VarChar(512)
+  resultsJson String   @map("results_json") @db.LongText
+  fetchedAt   DateTime @default(now()) @map("fetched_at") @db.DateTime(3)
+  ttlMs       Int      @map("ttl_ms")
+
+  @@id([source, query])
+  @@index([source], name: "idx_search_cache_source")
+  @@map("search_cache")
+}
+
+model RankingConfig {
+  discordGuildId  String  @id @map("discord_guild_id") @db.VarChar(32)
+  notifyChannelId String? @map("notify_channel_id") @db.VarChar(32)
+  flyffServerId   Int     @default(23) @map("flyff_server_id")
+
+  @@map("ranking_config")
+}
+
+model WatchedFlyffGuild {
+  discordGuildId String @map("discord_guild_id") @db.VarChar(32)
+  flyffGuildName String @map("flyff_guild_name") @db.VarChar(64)
+
+  @@id([discordGuildId, flyffGuildName])
+  @@map("watched_flyff_guilds")
+}
+
+model RankingSnapshot {
+  flyffServerId Int    @map("flyff_server_id")
+  username      String @db.VarChar(64)
+
+  rank           Int     @map("rank")
+  level          Int
+  job            String  @db.VarChar(32) // 你 job 若更长就调
+  flyffGuildName String? @map("flyff_guild_name") @db.VarChar(64)
+  playtime       String? @db.VarChar(32)
+  serverText     String? @map("server_text") @db.VarChar(64)
+
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@id([flyffServerId, username])
+  @@index([flyffServerId, rank], name: "idx_server_rank")
+  @@map("ranking_snapshot")
+}

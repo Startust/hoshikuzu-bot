@@ -37,6 +37,10 @@ export function diffByUsername(
     }
   }
 
+  console.log(
+    `[diff] found ${changes.length} guild changes, checking for suspected renames...`,
+  );
+
   // 2) 可选：疑似改名（基于特征匹配）
   // 只有当你确实想要“改名提醒”，才开启这个逻辑
   // 这里默认开启且阈值较高，避免误报
@@ -105,6 +109,10 @@ export function diffByUsername(
       }
     }
   }
+
+  console.log(
+    `[diff] found ${changes.length} total changes (including suspected renames)`,
+  );
 
   return changes;
 }

@@ -3,12 +3,12 @@ import { fetch } from 'undici';
 
 export type ScrapedPlayer = {
   username: string;
-  rank: number | null;
-  level: number | null;
-  job: string | null;
-  flyffGuildName: string | null;
-  playtime: string | null;
-  serverText: string | null;
+  rank: number;
+  level: number;
+  job: string;
+  flyffGuildName: string;
+  playtime: string;
+  serverText: string;
 };
 
 const BASE = 'https://universe.flyff.com/sniegu/ranking/characters';
@@ -84,12 +84,12 @@ function parsePlayersFromHtml(html: string): {
 
     players.push({
       username: name,
-      rank,
-      level,
-      job,
-      flyffGuildName: guild,
-      playtime,
-      serverText,
+      rank: rank ?? 0,
+      level: level ?? 0,
+      job: job ?? '',
+      flyffGuildName: guild ?? '',
+      playtime: playtime ?? '',
+      serverText: serverText ?? '',
     });
   });
 
