@@ -99,3 +99,14 @@ model RankingEvent {
   @@index([flyffServerId, username, createdAt], name: "idx_event_user_time")
   @@map("ranking_event")
 }
+
+model DiscoveredFlyffGuild {
+  flyffServerId  Int      @map("flyff_server_id")
+  flyffGuildName String   @map("flyff_guild_name") @db.VarChar(64)
+  lastSeenAt     DateTime @default(now()) @updatedAt @map("last_seen_at") @db.DateTime(3)
+
+  @@id([flyffServerId, flyffGuildName])
+  @@index([flyffServerId, lastSeenAt], name: "idx_discovered_guild_server_seen")
+  @@index([flyffServerId, flyffGuildName], name: "idx_discovered_guild_server_name")
+  @@map("discovered_flyff_guilds")
+}

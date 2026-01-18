@@ -3,6 +3,7 @@ import '@sapphire/plugin-subcommands/register';
 
 import { HoshikuzuClient } from './bot/client';
 import { startFlyffPoller } from './bot/flyff-poller';
+import { autoClearCommands } from './discord/autoClearCommands';
 
 const token = process.env.DISCORD_TOKEN;
 if (!token) throw new Error('DISCORD_TOKEN is missing');
@@ -20,6 +21,13 @@ async function main() {
     console.log('Listeners loaded:', client.stores.get('listeners')?.size);
     startFlyffPoller(client);
   });
+
+  const isProd = process.env.NODE_ENV === 'production';
+
+  // ✅ 推荐策略：
+  // - 开发：只清 DEV guild（秒生效）
+  // - 生产：清 global（可能延迟生效）
+  await autoClearCommands(isProd ? 'global' : 'guild');
 
   await client.login(token);
 }

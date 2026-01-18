@@ -265,3 +265,60 @@ export async function listGuildHistoryEvents(params: {
 
   return rows as any;
 }
+
+export async function upsertDiscoveredGuilds(flyffServerId: number, names: string[]) {
+  const unique = Array.from(new Set(names.map((x) => x.trim()).filter(Boolean)));
+  if (unique.length === 0) return;
+
+  // 1) 先插入不存在的（重复跳过）
+  await prisma.discoveredFlyffGuild.createMany({
+    data: unique.map((n) => ({ flyffServerId, flyffGuildName: n })),
+    skipDuplicates: true,
+  });
+
+  // 2) 再把这些 guild 的 lastSeenAt 刷新到 now
+  //    @updatedAt 会在 update 时自动刷新
+  await prisma.discoveredFlyffGuild.updateMany({
+    where: { flyffServerId, flyffGuildName: { in: unique } },
+    data: {}, // 触发 updatedAt
+  });
+}
+
+export async function searchDiscoveredGuilds(
+  flyffServerId: number,
+  q: string,
+  limit = 25,
+): Promise<string[]> {
+  if (!q) {
+    const rows = await prisma.discoveredFlyffGuild.findMany({
+      where: { flyffServerId },
+      orderBy: { lastSeenAt: 'desc' },
+      take: limit,
+      select: { flyffGuildName: true },
+    });
+    return rows.map((r) => r.flyffGuildName);
+  }
+
+  // MySQL：contains 默认大小写是否敏感取决于 collation；
+  // 一般 utf8mb4_general_ci / _ai_ci 是不敏感的，够用。
+  const rows = await prisma.discoveredFlyffGuild.findMany({
+    where: {
+      flyffServerId,
+      flyffGuildName: { contains: q },
+    },
+    orderBy: { lastSeenAt: 'desc' },
+    take: limit,
+    select: { flyffGuildName: true },
+  });
+
+  // 可选：把“前缀命中”排前面（更像智能补全）
+  const lower = q.toLowerCase();
+  return rows
+    .map((r) => r.flyffGuildName)
+    .sort((a, b) => {
+      const ap = a.toLowerCase().startsWith(lower) ? 0 : 1;
+      const bp = b.toLowerCase().startsWith(lower) ? 0 : 1;
+      return ap - bp;
+    })
+    .slice(0, limit);
+}
