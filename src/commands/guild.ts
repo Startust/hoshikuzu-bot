@@ -191,7 +191,11 @@ export class GuildCommand extends Subcommand {
             .setName('unwatch')
             .setDescription('ギルドのフォローを解除する')
             .addStringOption((o) =>
-              o.setName('name').setDescription('ギルド名').setRequired(true),
+              o
+                .setName('name')
+                .setDescription('ギルド名')
+                .setRequired(true)
+                .setAutocomplete(true),
             ),
         )
         .addSubcommand((sc) =>
@@ -202,7 +206,11 @@ export class GuildCommand extends Subcommand {
             .setName('history')
             .setDescription('指定した Flyff ギルドの履歴を表示')
             .addStringOption((o) =>
-              o.setName('name').setDescription('ギルド名').setRequired(true),
+              o
+                .setName('name')
+                .setDescription('ギルド名')
+                .setRequired(true)
+                .setAutocomplete(true),
             )
             .addIntegerOption((o) =>
               o
