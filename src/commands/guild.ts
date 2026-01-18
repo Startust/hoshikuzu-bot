@@ -1,5 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Subcommand } from '@sapphire/plugin-subcommands';
+import type { SlashCommandBuilder } from 'discord.js';
 
 import {
   listWatchedGuilds,
@@ -27,32 +28,38 @@ import {
 })
 export class GuildCommand extends Subcommand {
   public override registerApplicationCommands(registry: Subcommand.Registry) {
-    registry.registerChatInputCommand(
-      (builder) =>
-        builder
-          .setName('guild')
-          .setDescription('关注/取消关注 Flyff 公会')
-          .addSubcommand((sc) =>
-            sc
-              .setName('watch')
-              .setDescription('关注一个公会')
-              .addStringOption((o) =>
-                o.setName('name').setDescription('公会名').setRequired(true),
-              ),
-          )
-          .addSubcommand((sc) =>
-            sc
-              .setName('unwatch')
-              .setDescription('取消关注一个公会')
-              .addStringOption((o) =>
-                o.setName('name').setDescription('公会名').setRequired(true),
-              ),
-          )
-          .addSubcommand((sc) => sc.setName('list').setDescription('查看已关注公会')),
-      {
-        guildIds: [process.env.DEV_GUILD_ID!],
-      },
-    );
+    const devGuildId = process.env.DEV_GUILD_ID;
+    const isProd = process.env.NODE_ENV === 'production';
+
+    const command = (builder: SlashCommandBuilder) =>
+      builder
+        .setName('guild')
+        .setDescription('关注/取消关注 Flyff 公会')
+        .addSubcommand((sc) =>
+          sc
+            .setName('watch')
+            .setDescription('关注一个公会')
+            .addStringOption((o) =>
+              o.setName('name').setDescription('公会名').setRequired(true),
+            ),
+        )
+        .addSubcommand((sc) =>
+          sc
+            .setName('unwatch')
+            .setDescription('取消关注一个公会')
+            .addStringOption((o) =>
+              o.setName('name').setDescription('公会名').setRequired(true),
+            ),
+        )
+        .addSubcommand((sc) => sc.setName('list').setDescription('查看已关注公会'));
+
+    if (!isProd && devGuildId) {
+      console.log('[register] registering GUILD commands to', devGuildId);
+      registry.registerChatInputCommand(command, { guildIds: [devGuildId] });
+    } else {
+      console.log('[register] registering GLOBAL commands');
+      registry.registerChatInputCommand(command); // 不传 guildIds => 全局
+    }
   }
 
   public async chatInputWatch(interaction: Subcommand.ChatInputCommandInteraction) {
