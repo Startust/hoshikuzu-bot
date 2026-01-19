@@ -13,51 +13,59 @@ export class MessageCreateListener extends Listener {
   }
 
   public async run(message: Message) {
-    // Ignore messages from bots
+    // 1. Ignore bots
     if (message.author.bot) return;
 
-    // Ignore messages that do not mention the bot
+    // 2. Only respond when mentioned
     const me = this.container.client.user;
     if (!me) return;
     if (!message.mentions.has(me)) return;
 
+    // 3. Ignore DMs
     const guildId = message.guild?.id;
-    if (!guildId) return; // Ignore DMs
+    if (!guildId) return;
 
+    // 4. Extract clean content
     const content = message.content
       .replaceAll(`<@${me.id}>`, '')
       .replaceAll(`<@!${me.id}>`, '')
       .trim();
 
     if (!content) {
-      await message.reply('Yes? How can I help you?');
+      await message.reply('ご用件をどうぞ。');
       return;
     }
 
-    // Get context
-    const history = getContext(guildId, message.channel.id, message.author.id);
+    const channelId = message.channel.id;
+    const userId = message.author.id;
 
-    // store user message in history
-    appendContext(guildId, message.channel.id, message.author.id, {
-      role: 'user',
-      content,
-    });
+    // ✅ 5. 先取“过去的 history”（不包含本条消息）
+    const history = getContext(guildId, channelId, userId);
 
+    // 6. 打字中提示
     if ('sendTyping' in message.channel) {
       await message.channel.sendTyping();
     }
 
     try {
+      // 7. 调用模型（history + 当前 user content）
       const reply = await askModel({
         history,
         userContent: content,
       });
 
-      appendContext(guildId, message.channel.id, message.author.id, {
+      // ✅ 8. 按顺序写入上下文（user → assistant）
+      appendContext(guildId, channelId, userId, {
+        role: 'user',
+        content,
+      });
+
+      appendContext(guildId, channelId, userId, {
         role: 'assistant',
         content: reply,
       });
 
+      // 9. 回复
       await message.reply(reply);
     } catch (err) {
       console.error('Error while processing message:', err);
