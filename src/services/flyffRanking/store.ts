@@ -190,6 +190,8 @@ export async function appendEvents(
           flyffGuildName: p?.flyffGuildName ?? null,
         };
       }
+
+      const p = latestByUsername.get(c.afterName) || latestByUsername.get(c.beforeName);
       // rename
       return {
         flyffServerId,
@@ -200,6 +202,10 @@ export async function appendEvents(
         reasonJson: JSON.stringify(c.reason ?? []),
         beforeValue: c.beforeGuild ?? null,
         afterValue: c.afterGuild ?? null,
+        rank: p?.rank ?? null,
+        level: p?.level ?? null,
+        job: p?.job ?? null,
+        flyffGuildName: p?.flyffGuildName ?? null,
       };
     }),
   });

@@ -110,3 +110,11 @@ model DiscoveredFlyffGuild {
   @@index([flyffServerId, flyffGuildName], name: "idx_discovered_guild_server_name")
   @@map("discovered_flyff_guilds")
 }
+
+model GuildAllowlist {
+  discordGuildId String   @id @map("discord_guild_id") @db.VarChar(32)
+  note           String?  @db.VarChar(255)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("guild_allowlist")
+}
