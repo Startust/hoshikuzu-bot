@@ -248,7 +248,7 @@ export class GuildCommand extends Subcommand {
       .setFooter({ text: FOOTER_TEXT })
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], flags: ['Ephemeral'] });
   }
 
   public async chatInputUnwatch(interaction: Subcommand.ChatInputCommandInteraction) {
@@ -268,7 +268,7 @@ export class GuildCommand extends Subcommand {
       .setFooter({ text: FOOTER_TEXT })
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], flags: ['Ephemeral'] });
   }
 
   public async chatInputList(interaction: Subcommand.ChatInputCommandInteraction) {
@@ -283,7 +283,7 @@ export class GuildCommand extends Subcommand {
         .setFooter({ text: FOOTER_TEXT })
         .setTimestamp();
 
-      await interaction.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed], flags: ['Ephemeral'] });
       return;
     }
 
@@ -299,7 +299,7 @@ export class GuildCommand extends Subcommand {
       .setFooter({ text: FOOTER_TEXT })
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], flags: ['Ephemeral'] });
   }
 
   public async chatInputHistory(interaction: Subcommand.ChatInputCommandInteraction) {
@@ -307,7 +307,7 @@ export class GuildCommand extends Subcommand {
     const name = interaction.options.getString('name', true);
     const limit = Math.min(interaction.options.getInteger('limit') ?? 20, 50);
 
-    await interaction.deferReply();
+    await interaction.deferReply({ flags: ['Ephemeral'] });
 
     const cfg = await getConfig(discordGuildId);
     const serverId = cfg.flyffServerId ?? 23;

@@ -62,6 +62,6 @@ export class RankCommand extends Subcommand {
       .setTimestamp(new Date())
       .setColor(0x57f287);
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], flags: ['Ephemeral'] });
   }
 }
