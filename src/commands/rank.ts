@@ -1,7 +1,12 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import type { Command } from '@sapphire/framework';
 import { Subcommand } from '@sapphire/plugin-subcommands';
-import { ChannelType, EmbedBuilder, type SlashCommandBuilder } from 'discord.js';
+import {
+  ChannelType,
+  EmbedBuilder,
+  type SlashCommandBuilder,
+  type TextChannel,
+} from 'discord.js';
 
 import { upsertConfig } from '../services/flyffRanking/store.js';
 
@@ -47,7 +52,8 @@ export class RankCommand extends Subcommand {
 
     await upsertConfig({ discordGuildId, notifyChannelId: ch.id });
 
-    const embed = new EmbedBuilder()
+    // ===== 1️⃣ 给操作者的 Ephemeral 确认 =====
+    const confirmEmbed = new EmbedBuilder()
       .setTitle('✅ 通知チャンネルを設定しました')
       .setDescription(`今後の更新通知は ${`<#${ch.id}>`} に送信されます。`)
       .addFields(
@@ -62,6 +68,25 @@ export class RankCommand extends Subcommand {
       .setTimestamp(new Date())
       .setColor(0x57f287);
 
-    await interaction.reply({ embeds: [embed], flags: ['Ephemeral'] });
+    await interaction.reply({ embeds: [confirmEmbed], flags: ['Ephemeral'] });
+
+    // ===== 2️⃣ 向目标频道发送通知 =====
+    if (ch.type === ChannelType.GuildText) {
+      const notifyEmbed = new EmbedBuilder()
+        .setTitle('📢 通知チャンネルが設定されました')
+        .setDescription(
+          `このチャンネルは **Flyff Ranking Watcher** の通知先として設定されました。\n\n今後、公会・ランキング更新がここに送信されます。`,
+        )
+        .setFooter({ text: 'Flyff Ranking Watcher' })
+        .setTimestamp(new Date())
+        .setColor(0x5865f2);
+
+      try {
+        await (ch as TextChannel).send({ embeds: [notifyEmbed] });
+      } catch (err) {
+        // ⚠️ 不影响主流程，只记录
+        console.warn(`[notifyChannel] failed to send message to ${ch.id}`, err);
+      }
+    }
   }
 }

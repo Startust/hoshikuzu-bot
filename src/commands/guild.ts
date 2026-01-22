@@ -299,7 +299,7 @@ export class GuildCommand extends Subcommand {
       .setFooter({ text: FOOTER_TEXT })
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed], flags: ['Ephemeral'] });
+    await interaction.reply({ embeds: [embed] });
   }
 
   public async chatInputHistory(interaction: Subcommand.ChatInputCommandInteraction) {
@@ -307,7 +307,7 @@ export class GuildCommand extends Subcommand {
     const name = interaction.options.getString('name', true);
     const limit = Math.min(interaction.options.getInteger('limit') ?? 20, 50);
 
-    await interaction.deferReply({ flags: ['Ephemeral'] });
+    await interaction.deferReply();
 
     const cfg = await getConfig(discordGuildId);
     const serverId = cfg.flyffServerId ?? 23;
