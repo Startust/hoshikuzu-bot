@@ -10,9 +10,9 @@ ALTER TABLE `ranking_snapshot`
 
 UPDATE `ranking_snapshot`
 SET `player_id` = CASE
-    WHEN `username` REGEXP '#[[:space:]]*[0-9]+[[:space:]]*$'
-        THEN REGEXP_REPLACE(`username`, '^.*#[[:space:]]*([0-9]+)[[:space:]]*$', '\\1')
-    ELSE `username`
+    WHEN CAST(`username` AS CHAR CHARACTER SET utf8mb4) LIKE '%#%'
+        THEN TRIM(SUBSTRING_INDEX(CAST(`username` AS CHAR CHARACTER SET utf8mb4), '#', -1))
+    ELSE CAST(`username` AS CHAR CHARACTER SET utf8mb4)
 END;
 
 ALTER TABLE `ranking_snapshot`

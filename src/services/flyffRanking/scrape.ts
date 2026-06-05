@@ -27,7 +27,7 @@ function normalize(s: string) {
 
 export function parsePlayerName(rawName: string) {
   const value = normalize(rawName);
-  const match = /^(.*?)\s*#\s*([0-9]+)\s*$/u.exec(value);
+  const match = /^(.*?)\s*#\s*([A-Za-z0-9]+)\s*$/u.exec(value);
 
   if (!match) {
     return { username: value, playerId: value };
