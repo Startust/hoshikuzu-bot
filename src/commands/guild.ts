@@ -25,6 +25,8 @@ const FOOTER_TEXT = 'Flyff Guild Watcher';
 const HISTORY_PAGE_SIZE = 10;
 const HISTORY_BTN_PREV = 'guild_history_prev';
 const HISTORY_BTN_NEXT = 'guild_history_next';
+const DISCORD_CHOICE_NAME_MAX = 100;
+const INVISIBLE_NAME_CHARS = /[\s\u115f\u1160\u3164\uffa0\u200b-\u200d\ufeff]/gu;
 
 function fmtGuild(x: string | null) {
   return x ?? 'なし';
@@ -49,6 +51,19 @@ function joinAndTrimLines(lines: string[], max = 1024) {
     out = next;
   }
   return out || '（なし）';
+}
+
+function toAutocompleteChoice(name: string) {
+  const value = name.trim();
+  if (!value) return null;
+
+  const visible = value.replace(INVISIBLE_NAME_CHARS, '');
+  if (!visible) return null;
+
+  return {
+    name: Array.from(value).slice(0, DISCORD_CHOICE_NAME_MAX).join(''),
+    value,
+  };
 }
 
 function buildHistoryRow(page: number, totalPages: number, disabled = false) {
@@ -409,6 +424,6 @@ export class GuildCommand extends Subcommand {
 
     const items = await searchDiscoveredGuilds(flyffServerId, q, 25);
 
-    await interaction.respond(items.map((name) => ({ name, value: name })));
+    await interaction.respond(items.map(toAutocompleteChoice).filter((x) => x !== null));
   }
 }
