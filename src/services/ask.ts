@@ -1,6 +1,19 @@
 import type { ChatMessage } from '../bot/context-store.js';
 import { openai, SYSTEM_PROMPT } from './openai.js';
 
+type TextContentBlock = {
+  text: string;
+};
+
+function isTextContentBlock(value: unknown): value is TextContentBlock {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    'text' in value &&
+    typeof value.text === 'string'
+  );
+}
+
 function normalizeText(content: unknown): string {
   if (!content) return '';
   if (typeof content === 'string') return content.trim();
@@ -10,14 +23,7 @@ function normalizeText(content: unknown): string {
     const joined = content
       .map((c) => {
         if (typeof c === 'string') return c;
-        if (
-          c &&
-          typeof c === 'object' &&
-          'text' in c &&
-          typeof (c as any).text === 'string'
-        ) {
-          return (c as any).text;
-        }
+        if (isTextContentBlock(c)) return c.text;
         return '';
       })
       .join('');

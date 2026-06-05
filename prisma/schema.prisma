@@ -57,7 +57,7 @@ model SearchCache {
 model RankingConfig {
   discordGuildId  String  @id @map("discord_guild_id") @db.VarChar(32)
   notifyChannelId String? @map("notify_channel_id") @db.VarChar(32)
-  flyffServerId   Int     @default(23) @map("flyff_server_id")
+  flyffServerId   Int     @default(25) @map("flyff_server_id")
 
   @@map("ranking_config")
 }
@@ -72,6 +72,7 @@ model WatchedFlyffGuild {
 
 model RankingSnapshot {
   flyffServerId Int    @map("flyff_server_id")
+  playerId      String @map("player_id") @db.VarChar(32)
   username      String @db.VarChar(64)
 
   rank           Int     @map("rank")
@@ -83,7 +84,7 @@ model RankingSnapshot {
 
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  @@id([flyffServerId, username])
+  @@id([flyffServerId, playerId])
   @@index([flyffServerId, rank], name: "idx_server_rank")
   @@map("ranking_snapshot")
 }
@@ -94,6 +95,7 @@ model RankingEvent {
   eventType     String @map("event_type") @db.VarChar(16) // "guild" | "rename"
 
   // 对 guild 变动：username 有意义；对 rename：beforeName/afterName 有意义
+  playerId   String? @map("player_id") @db.VarChar(32)
   username    String? @db.VarChar(64)
   beforeValue String? @map("before_value") @db.VarChar(128)
   afterValue  String? @map("after_value") @db.VarChar(128)
@@ -114,6 +116,7 @@ model RankingEvent {
 
   @@index([flyffServerId, createdAt], name: "idx_event_server_time")
   @@index([flyffServerId, username, createdAt], name: "idx_event_user_time")
+  @@index([flyffServerId, playerId, createdAt], name: "idx_event_player_time")
   @@map("ranking_event")
 }
 

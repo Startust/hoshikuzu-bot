@@ -1,9 +1,10 @@
 import type { SapphireClient } from '@sapphire/framework';
 import { ChannelType, EmbedBuilder } from 'discord.js';
 
+import { DEFAULT_FLYFF_SERVER_ID } from '../services/flyffRanking/constants.js';
 import {
   type Change,
-  diffByUsername,
+  diffByPlayerId,
   filterChangesByWatched,
 } from '../services/flyffRanking/diff.js';
 import { fetchAllPlayers } from '../services/flyffRanking/scrape.js';
@@ -18,7 +19,7 @@ import {
 
 const runningServer = new Set<number>();
 
-const DEFAULT_SERVER_IDS = [23]; // 你想“默认扫描”的服务器列表；可扩展
+const DEFAULT_SERVER_IDS = [DEFAULT_FLYFF_SERVER_ID]; // 你想“默认扫描”的服务器列表；可扩展
 
 export function startFlyffPoller(client: SapphireClient) {
   console.log(`[flyff poller] started at ${new Date().toISOString()}`);
@@ -36,7 +37,7 @@ export async function tick(client: SapphireClient) {
 
   // 1) 决定要扫描哪些 server：默认 + 配置里出现过的
   const serverIds = new Set<number>(DEFAULT_SERVER_IDS);
-  for (const cfg of configs) serverIds.add(cfg.flyffServerId ?? 23);
+  for (const cfg of configs) serverIds.add(cfg.flyffServerId ?? DEFAULT_FLYFF_SERVER_ID);
 
   // 2) 按 server 扫描（同一 server 只抓一次榜单）
   for (const serverId of serverIds) {
@@ -68,10 +69,10 @@ async function scanServerAndNotifyGuilds(
   console.log(`[flyff poller] server=${serverId} fetched ${latest.length} players`);
 
   // ✅ 1) 全量 diff + 记录事件（不看 watched/config）
-  const allChanges = diffByUsername(oldSnap, latest);
+  const allChanges = diffByPlayerId(oldSnap, latest);
   if (allChanges.length) {
-    const latestByUsername = new Map(latest.map((p) => [p.username, p]));
-    await appendEvents(serverId, allChanges, latestByUsername);
+    const latestByPlayerId = new Map(latest.map((p) => [p.playerId, p]));
+    await appendEvents(serverId, allChanges, latestByPlayerId);
     console.log(
       `[flyff poller] server=${serverId} recorded ${allChanges.length} changes`,
     );
@@ -81,6 +82,7 @@ async function scanServerAndNotifyGuilds(
   await saveSnapshot(
     serverId,
     latest.map((p) => ({
+      playerId: p.playerId,
       username: p.username,
       rank: p.rank,
       level: p.level,
@@ -99,7 +101,9 @@ async function scanServerAndNotifyGuilds(
   await upsertDiscoveredGuilds(serverId, guildNames);
 
   // ✅ 3) 推送：仍然只给有配置的 guild 推（因为要知道 channel）
-  const guildConfigs = allConfigs.filter((c) => (c.flyffServerId ?? 23) === serverId);
+  const guildConfigs = allConfigs.filter(
+    (c) => (c.flyffServerId ?? DEFAULT_FLYFF_SERVER_ID) === serverId,
+  );
   for (const cfg of guildConfigs) {
     await maybeNotifyGuild(client, cfg, allChanges);
   }
@@ -161,6 +165,29 @@ async function maybeNotifyGuild(
         })
         .setTimestamp(new Date())
         .setColor(meta.color);
+
+      await channel.send({ embeds: [embed] });
+      continue;
+    }
+
+    if (c.type === 'rename') {
+      const embed = new EmbedBuilder()
+        .setTitle('📝 改名')
+        .setDescription(`**${c.beforeName}** → **${c.afterName}**`)
+        .addFields(
+          { name: 'Player ID', value: c.playerId, inline: true },
+          { name: 'Before Guild', value: fmtGuild(c.beforeGuild), inline: true },
+          { name: 'After Guild', value: fmtGuild(c.afterGuild), inline: true },
+        )
+        .setFooter({
+          text:
+            `server=${cfg.flyffServerId}` +
+            `｜検出=${changes.length}件` +
+            (omitted > 0 ? `（未表示 ${omitted}件）` : '') +
+            `｜${i + 1}/${top.length}`,
+        })
+        .setTimestamp(new Date())
+        .setColor(0xfee75c);
 
       await channel.send({ embeds: [embed] });
       continue;

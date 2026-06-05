@@ -1,4 +1,5 @@
 import { prisma } from '../../db/prisma.js';
+import { DEFAULT_FLYFF_SERVER_ID } from './constants.js';
 import type { Change } from './diff';
 import type { ScrapedPlayer } from './scrape';
 
@@ -54,14 +55,14 @@ export async function getConfig(discordGuildId: string): Promise<RankingConfig> 
     return {
       discordGuildId,
       notifyChannelId: null,
-      flyffServerId: 23,
+      flyffServerId: DEFAULT_FLYFF_SERVER_ID,
     };
   }
 
   return {
     discordGuildId: row.discordGuildId,
     notifyChannelId: row.notifyChannelId ?? null,
-    flyffServerId: row.flyffServerId ?? 23,
+    flyffServerId: row.flyffServerId ?? DEFAULT_FLYFF_SERVER_ID,
   };
 }
 
@@ -95,6 +96,7 @@ export async function unwatchGuild(discordGuildId: string, flyffGuildName: strin
 }
 
 export type PlayerRow = {
+  playerId: string;
   username: string;
   rank: number;
   level: number;
@@ -109,6 +111,7 @@ export async function loadSnapshot(flyffServerId: number) {
     where: { flyffServerId },
     orderBy: { rank: 'asc' },
     select: {
+      playerId: true,
       username: true,
       rank: true,
       level: true,
@@ -121,7 +124,8 @@ export async function loadSnapshot(flyffServerId: number) {
 
   const map = new Map<string, PlayerRow>();
   for (const r of rows) {
-    map.set(r.username, {
+    map.set(r.playerId, {
+      playerId: r.playerId,
       username: r.username,
       rank: r.rank,
       level: r.level,
@@ -143,6 +147,7 @@ export async function saveSnapshot(flyffServerId: number, players: PlayerRow[]) 
       await tx.rankingSnapshot.createMany({
         data: players.map((p) => ({
           flyffServerId,
+          playerId: p.playerId,
           username: p.username,
           rank: p.rank,
           level: p.level,
@@ -162,7 +167,7 @@ export async function listAllConfigs(): Promise<RankingConfig[]> {
   return rows.map((r) => ({
     discordGuildId: r.discordGuildId,
     notifyChannelId: r.notifyChannelId ?? null,
-    flyffServerId: r.flyffServerId ?? 23,
+    flyffServerId: r.flyffServerId ?? DEFAULT_FLYFF_SERVER_ID,
     enabled: true,
   }));
 }
@@ -170,17 +175,18 @@ export async function listAllConfigs(): Promise<RankingConfig[]> {
 export async function appendEvents(
   flyffServerId: number,
   changes: Change[], // 你 diff 的类型
-  latestByUsername: Map<string, ScrapedPlayer>, // 可选：补充 rank/level/job
+  latestByPlayerId: Map<string, ScrapedPlayer>, // 可选：补充 rank/level/job
 ) {
   if (!changes.length) return;
 
   await prisma.rankingEvent.createMany({
     data: changes.map((c) => {
       if (c.type === 'guild') {
-        const p = latestByUsername.get(c.username);
+        const p = latestByPlayerId.get(c.playerId);
         return {
           flyffServerId,
           eventType: 'guild',
+          playerId: c.playerId,
           username: c.username,
           beforeValue: c.before ?? null,
           afterValue: c.after ?? null,
@@ -191,11 +197,30 @@ export async function appendEvents(
         };
       }
 
-      const p = latestByUsername.get(c.afterName) || latestByUsername.get(c.beforeName);
-      // rename
+      const p = latestByPlayerId.get(c.playerId);
+
+      if (c.type === 'rename') {
+        return {
+          flyffServerId,
+          eventType: 'rename',
+          playerId: c.playerId,
+          username: c.afterName,
+          beforeName: c.beforeName,
+          afterName: c.afterName,
+          beforeValue: c.beforeGuild ?? null,
+          afterValue: c.afterGuild ?? null,
+          rank: p?.rank ?? null,
+          level: p?.level ?? null,
+          job: p?.job ?? null,
+          flyffGuildName: p?.flyffGuildName ?? null,
+        };
+      }
+
+      // suspected rename
       return {
         flyffServerId,
         eventType: 'suspected-rename',
+        playerId: c.playerId,
         beforeName: c.beforeName,
         afterName: c.afterName,
         score: c.score ?? null,
@@ -213,7 +238,8 @@ export async function appendEvents(
 
 export type GuildHistoryRow = {
   createdAt: Date;
-  eventType: 'guild' | 'suspected-rename';
+  eventType: 'guild' | 'rename' | 'suspected-rename';
+  playerId: string | null;
   username: string | null;
   beforeValue: string | null;
   afterValue: string | null;
@@ -225,6 +251,11 @@ export type GuildHistoryRow = {
   level: number | null;
   job: string | null;
 };
+
+function toHistoryEventType(value: string): GuildHistoryRow['eventType'] {
+  if (value === 'rename' || value === 'suspected-rename') return value;
+  return 'guild';
+}
 
 export async function listGuildHistoryEvents(params: {
   flyffServerId: number;
@@ -244,9 +275,9 @@ export async function listGuildHistoryEvents(params: {
           OR: [{ beforeValue: guildName }, { afterValue: guildName }],
         },
 
-        // suspected-rename: 也用 beforeValue/afterValue 存公会前/后，所以同样筛
+        // rename/suspected-rename: 也用 beforeValue/afterValue 存公会前/后，所以同样筛
         {
-          eventType: 'suspected-rename',
+          eventType: { in: ['rename', 'suspected-rename'] },
           OR: [{ beforeValue: guildName }, { afterValue: guildName }],
         },
       ],
@@ -256,6 +287,7 @@ export async function listGuildHistoryEvents(params: {
     select: {
       createdAt: true,
       eventType: true,
+      playerId: true,
       username: true,
       beforeValue: true,
       afterValue: true,
@@ -269,7 +301,10 @@ export async function listGuildHistoryEvents(params: {
     },
   });
 
-  return rows as any;
+  return rows.map((r) => ({
+    ...r,
+    eventType: toHistoryEventType(r.eventType),
+  }));
 }
 
 export async function upsertDiscoveredGuilds(flyffServerId: number, names: string[]) {

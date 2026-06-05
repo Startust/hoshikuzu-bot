@@ -1,0 +1,1 @@
+export const DEFAULT_FLYFF_SERVER_ID = 25;

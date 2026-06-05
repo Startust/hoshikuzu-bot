@@ -2,9 +2,24 @@ import type { ScrapedPlayer } from './scrape.js';
 import type { PlayerRow } from './store.js';
 
 export type Change =
-  | { type: 'guild'; username: string; before: string | null; after: string | null }
+  | {
+      type: 'guild';
+      playerId: string;
+      username: string;
+      before: string | null;
+      after: string | null;
+    }
+  | {
+      type: 'rename';
+      playerId: string;
+      beforeName: string;
+      afterName: string;
+      beforeGuild: string | null;
+      afterGuild: string | null;
+    }
   | {
       type: 'suspected-rename';
+      playerId: string;
       beforeName: string;
       afterName: string;
       score: number;
@@ -27,25 +42,38 @@ function isWatchedRelated(
   return watchedGuilds.has(before ?? '') || watchedGuilds.has(after ?? '');
 }
 
-export function diffByUsername(
+export function diffByPlayerId(
   oldMap: Map<string, PlayerRow>,
   latest: ScrapedPlayer[],
   watchedGuilds?: Set<string>,
 ): Change[] {
   const changes: Change[] = [];
 
-  const latestMap = new Map(latest.map((p) => [p.username, p]));
-  // 1) 同名公会变化
-  for (const [username, old] of oldMap.entries()) {
-    const now = latestMap.get(username);
+  const latestMap = new Map(latest.map((p) => [p.playerId, p]));
+  // 1) 同 ID 公会/名字变化
+  for (const [playerId, old] of oldMap.entries()) {
+    const now = latestMap.get(playerId);
     if (!now) continue;
 
     const before = old.flyffGuildName ?? null;
     const after = now.flyffGuildName ?? null;
 
+    if (old.username !== now.username) {
+      if (isWatchedRelated(watchedGuilds, before, after)) {
+        changes.push({
+          type: 'rename',
+          playerId,
+          beforeName: old.username,
+          afterName: now.username,
+          beforeGuild: before,
+          afterGuild: after,
+        });
+      }
+    }
+
     if (before !== after) {
       if (isWatchedRelated(watchedGuilds, before, after)) {
-        changes.push({ type: 'guild', username, before, after });
+        changes.push({ type: 'guild', playerId, username: now.username, before, after });
       }
     }
   }
@@ -58,11 +86,11 @@ export function diffByUsername(
   const disappeared: PlayerRow[] = [];
   const appeared: ScrapedPlayer[] = [];
 
-  for (const [username, old] of oldMap.entries()) {
-    if (!latestMap.has(username)) disappeared.push(old);
+  for (const [playerId, old] of oldMap.entries()) {
+    if (!latestMap.has(playerId)) disappeared.push(old);
   }
   for (const p of latest) {
-    if (!oldMap.has(p.username)) appeared.push(p);
+    if (!oldMap.has(p.playerId)) appeared.push(p);
   }
 
   const threshold = 6; // 分数阈值，越高越保守
@@ -108,6 +136,7 @@ export function diffByUsername(
       if (isWatchedRelated(watchedGuilds, beforeG, afterG)) {
         changes.push({
           type: 'suspected-rename',
+          playerId: best.p.playerId,
           beforeName: old.username,
           afterName: best.p.username,
           score: best.score,

@@ -9,6 +9,7 @@ import {
   type SlashCommandBuilder,
 } from 'discord.js';
 
+import { DEFAULT_FLYFF_SERVER_ID } from '../services/flyffRanking/constants.js';
 import {
   getConfig,
   type GuildHistoryRow,
@@ -109,9 +110,10 @@ function buildHistoryEmbedForPage(args: {
       continue;
     }
 
-    // suspected-rename
+    // rename / suspected-rename
     const beforeN = e.beforeName ?? '??';
     const afterN = e.afterName ?? '??';
+    const isSuspected = e.eventType === 'suspected-rename';
     const score = e.score ?? 0;
 
     let reasons: string[] = [];
@@ -122,8 +124,10 @@ function buildHistoryEmbedForPage(args: {
     }
 
     const reasonText = reasons.length ? `根拠：${reasons.join(', ')}` : '';
+    const kind = isSuspected ? '⚠️' : '📝';
     const line =
-      `• <t:${ts}:R> ⚠️ **${beforeN}** → **${afterN}**（score=${score}）` +
+      `• <t:${ts}:R> ${kind} **${beforeN}** → **${afterN}**` +
+      (isSuspected ? `（score=${score}）` : '') +
       (reasonText ? `｜${reasonText}` : '');
 
     // 一行太长会很难看，轻微收敛
@@ -310,10 +314,10 @@ export class GuildCommand extends Subcommand {
     await interaction.deferReply();
 
     const cfg = await getConfig(discordGuildId);
-    const serverId = cfg.flyffServerId ?? 23;
+    const serverId = cfg.flyffServerId ?? DEFAULT_FLYFF_SERVER_ID;
 
     const events = await listGuildHistoryEvents({
-      flyffServerId: cfg.flyffServerId ?? 23,
+      flyffServerId: cfg.flyffServerId ?? DEFAULT_FLYFF_SERVER_ID,
       guildName: name,
       limit,
     });
@@ -401,7 +405,7 @@ export class GuildCommand extends Subcommand {
     // 根据当前 Discord guild 的配置拿 flyffServerId（你现有逻辑）
     const discordGuildId = interaction.guildId!;
     const cfg = await getConfig(discordGuildId);
-    const flyffServerId = cfg.flyffServerId ?? 23;
+    const flyffServerId = cfg.flyffServerId ?? DEFAULT_FLYFF_SERVER_ID;
 
     const items = await searchDiscoveredGuilds(flyffServerId, q, 25);
 

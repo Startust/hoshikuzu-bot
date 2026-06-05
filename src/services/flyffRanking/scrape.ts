@@ -2,6 +2,7 @@ import * as cheerio from 'cheerio';
 import { fetch } from 'undici';
 
 export type ScrapedPlayer = {
+  playerId: string;
   username: string;
   rank: number;
   level: number;
@@ -22,6 +23,20 @@ function buildUrl(serverId: number, page: number) {
 
 function normalize(s: string) {
   return s.replace(/\s+/g, ' ').trim();
+}
+
+export function parsePlayerName(rawName: string) {
+  const value = normalize(rawName);
+  const match = /^(.*?)\s*#\s*([0-9]+)\s*$/u.exec(value);
+
+  if (!match) {
+    return { username: value, playerId: value };
+  }
+
+  return {
+    username: normalize(match[1] ?? value),
+    playerId: match[2] ?? value,
+  };
 }
 
 function parseMaxPage($: cheerio.CheerioAPI) {
@@ -67,8 +82,9 @@ function parsePlayersFromHtml(html: string): {
       else if (medalAlt.includes('third')) rank = 3;
     }
 
-    const name = normalize($(cells[1]).clone().children().remove().end().text());
+    const rawName = normalize($(cells[1]).clone().children().remove().end().text());
     // 上面这句：把 name 单元格里的 img/badge 去掉，只留纯文本名字
+    const { username, playerId } = parsePlayerName(rawName);
 
     const level = Number(normalize($(cells[2]).text())) || null;
 
@@ -80,10 +96,11 @@ function parsePlayersFromHtml(html: string): {
     const playtime = normalize($(cells[5]).text()) || null;
     const serverText = normalize($(cells[6]).text()) || null;
 
-    if (!name) return;
+    if (!username || !playerId) return;
 
     players.push({
-      username: name,
+      playerId,
+      username,
       rank: rank ?? 0,
       level: level ?? 0,
       job: job ?? '',
