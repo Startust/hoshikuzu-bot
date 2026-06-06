@@ -89,6 +89,26 @@ model RankingSnapshot {
   @@map("ranking_snapshot")
 }
 
+model GuildMemberSnapshot {
+  flyffServerId  Int    @map("flyff_server_id")
+  flyffGuildName String @map("flyff_guild_name") @db.VarChar(64)
+  playerId       String @map("player_id") @db.VarChar(32)
+  username       String @db.VarChar(64)
+
+  rank       Int     @map("rank")
+  level      Int
+  job        String  @db.VarChar(32)
+  playtime   String? @db.VarChar(32)
+  serverText String? @map("server_text") @db.VarChar(64)
+
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+
+  @@id([flyffServerId, flyffGuildName, playerId])
+  @@index([flyffServerId, flyffGuildName, rank], name: "idx_guild_members_rank")
+  @@index([flyffServerId, playerId], name: "idx_guild_members_player")
+  @@map("guild_member_snapshot")
+}
+
 model RankingEvent {
   id            BigInt @id @default(autoincrement())
   flyffServerId Int    @map("flyff_server_id")

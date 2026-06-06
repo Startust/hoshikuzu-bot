@@ -216,6 +216,22 @@ function buildSnapshotRows(flyffServerId: number, players: PlayerRow[]) {
   }));
 }
 
+function buildGuildMemberRows(flyffServerId: number, players: PlayerRow[]) {
+  return players
+    .filter((p) => p.flyffGuildName.trim().length > 0)
+    .map((p) => ({
+      flyffServerId,
+      flyffGuildName: p.flyffGuildName,
+      playerId: p.playerId,
+      username: p.username,
+      rank: p.rank,
+      level: p.level,
+      job: p.job,
+      playtime: p.playtime,
+      serverText: p.serverText,
+    }));
+}
+
 export async function persistChangesAndSnapshot(params: {
   flyffServerId: number;
   changes: Change[];
@@ -231,6 +247,12 @@ export async function persistChangesAndSnapshot(params: {
       await tx.rankingSnapshot.createMany({
         data: buildSnapshotRows(flyffServerId, players),
       });
+    }
+
+    await tx.guildMemberSnapshot.deleteMany({ where: { flyffServerId } });
+    const guildMemberRows = buildGuildMemberRows(flyffServerId, players);
+    if (guildMemberRows.length) {
+      await tx.guildMemberSnapshot.createMany({ data: guildMemberRows });
     }
 
     if (changes.length) {
@@ -280,9 +302,45 @@ export type GuildHistoryRow = {
   job: string | null;
 };
 
+export type GuildMemberRow = {
+  playerId: string;
+  username: string;
+  rank: number;
+  level: number;
+  job: string;
+  playtime: string | null;
+  serverText: string | null;
+  updatedAt: Date;
+};
+
 function toHistoryEventType(value: string): GuildHistoryRow['eventType'] {
   if (value === 'rename' || value === 'suspected-rename') return value;
   return 'guild';
+}
+
+export async function listGuildMembers(params: {
+  flyffServerId: number;
+  guildName: string;
+}): Promise<GuildMemberRow[]> {
+  const rows = await prisma.guildMemberSnapshot.findMany({
+    where: {
+      flyffServerId: params.flyffServerId,
+      flyffGuildName: params.guildName,
+    },
+    orderBy: [{ rank: 'asc' }, { username: 'asc' }],
+    select: {
+      playerId: true,
+      username: true,
+      rank: true,
+      level: true,
+      job: true,
+      playtime: true,
+      serverText: true,
+      updatedAt: true,
+    },
+  });
+
+  return rows;
 }
 
 export async function listGuildHistoryEvents(params: {

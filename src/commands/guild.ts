@@ -13,7 +13,9 @@ import { DEFAULT_FLYFF_SERVER_ID } from '../services/flyffRanking/constants.js';
 import {
   getConfig,
   type GuildHistoryRow,
+  type GuildMemberRow,
   listGuildHistoryEvents,
+  listGuildMembers,
   listWatchedGuilds,
   searchDiscoveredGuilds,
   unwatchGuild,
@@ -25,6 +27,9 @@ const FOOTER_TEXT = 'Flyff Guild Watcher';
 const HISTORY_PAGE_SIZE = 10;
 const HISTORY_BTN_PREV = 'guild_history_prev';
 const HISTORY_BTN_NEXT = 'guild_history_next';
+const MEMBERS_PAGE_SIZE = 15;
+const MEMBERS_BTN_PREV = 'guild_members_prev';
+const MEMBERS_BTN_NEXT = 'guild_members_next';
 const DISCORD_CHOICE_NAME_MAX = 100;
 const INVISIBLE_NAME_CHARS = /[\s\u115f\u1160\u3164\uffa0\u200b-\u200d\ufeff]/gu;
 
@@ -82,6 +87,86 @@ function buildHistoryRow(page: number, totalPages: number, disabled = false) {
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(nextDisabled),
   );
+}
+
+function buildMembersRow(page: number, totalPages: number, disabled = false) {
+  const prevDisabled = disabled || page <= 0;
+  const nextDisabled = disabled || page >= totalPages - 1;
+
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(MEMBERS_BTN_PREV)
+      .setLabel('⬅️ 前へ')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(prevDisabled),
+    new ButtonBuilder()
+      .setCustomId(MEMBERS_BTN_NEXT)
+      .setLabel('次へ ➡️')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(nextDisabled),
+  );
+}
+
+function clipCell(value: string | number | null | undefined, max: number) {
+  const text = String(value ?? '-').replace(/`/g, "'").replace(/\s+/g, ' ').trim();
+  const chars = Array.from(text || '-');
+  if (chars.length <= max) return chars.join('');
+  return chars.slice(0, Math.max(1, max - 1)).join('') + '…';
+}
+
+function padCell(value: string | number | null | undefined, width: number, max = width) {
+  const text = clipCell(value, max);
+  return text + ' '.repeat(Math.max(0, width - text.length));
+}
+
+function buildMembersTable(members: GuildMemberRow[]) {
+  const header = `${padCell('Rank', 6)} ${padCell('Name', 18)} ${padCell('Lv', 4)} ${padCell('Job', 14)} Playtime`;
+  const lines = members.map((m) =>
+    [
+      padCell(`#${m.rank}`, 6),
+      padCell(m.username, 18, 18),
+      padCell(m.level, 4),
+      padCell(m.job, 14, 14),
+      clipCell(m.playtime, 16),
+    ].join(' '),
+  );
+
+  return ['```text', header, ...lines, '```'].join('\n');
+}
+
+function buildMembersEmbedForPage(args: {
+  page: number;
+  name: string;
+  serverId: number;
+  members: GuildMemberRow[];
+}) {
+  const { page, name, serverId, members } = args;
+
+  const totalPages = Math.max(1, Math.ceil(members.length / MEMBERS_PAGE_SIZE));
+  const safePage = Math.min(Math.max(page, 0), totalPages - 1);
+  const slice = members.slice(
+    safePage * MEMBERS_PAGE_SIZE,
+    safePage * MEMBERS_PAGE_SIZE + MEMBERS_PAGE_SIZE,
+  );
+  const latestUpdatedAt = members.reduce<Date | null>(
+    (latest, member) =>
+      !latest || member.updatedAt.getTime() > latest.getTime() ? member.updatedAt : latest,
+    null,
+  );
+  const updatedText = latestUpdatedAt
+    ? `｜更新 <t:${Math.floor(latestUpdatedAt.getTime() / 1000)}:R>`
+    : '';
+
+  const embed = new EmbedBuilder()
+    .setTitle(`👥 メンバー：${name}`)
+    .setDescription(
+      `server=${serverId}｜合計 ${members.length} 人｜ページ ${safePage + 1}/${totalPages}（${MEMBERS_PAGE_SIZE}人/ページ）${updatedText}\n${buildMembersTable(slice)}`,
+    )
+    .setColor(0x5865f2)
+    .setFooter({ text: FOOTER_TEXT })
+    .setTimestamp();
+
+  return { embed, safePage, totalPages };
 }
 
 function buildHistoryEmbedForPage(args: {
@@ -167,6 +252,7 @@ function buildHistoryEmbedForPage(args: {
     { name: 'unwatch', chatInputRun: 'chatInputUnwatch' },
     { name: 'list', chatInputRun: 'chatInputList' },
     { name: 'history', chatInputRun: 'chatInputHistory' },
+    { name: 'members', chatInputRun: 'chatInputMembers' },
   ],
 })
 export class GuildCommand extends Subcommand {
@@ -222,6 +308,18 @@ export class GuildCommand extends Subcommand {
                 .setDescription('表示件数（デフォルト20、最大50）')
                 .setMinValue(1)
                 .setMaxValue(50),
+            ),
+        )
+        .addSubcommand((sc) =>
+          sc
+            .setName('members')
+            .setDescription('指定した Flyff ギルドの現在のランキング上メンバーを表示')
+            .addStringOption((o) =>
+              o
+                .setName('name')
+                .setDescription('ギルド名')
+                .setRequired(true)
+                .setAutocomplete(true),
             ),
         );
 
@@ -385,6 +483,78 @@ export class GuildCommand extends Subcommand {
     });
   }
 
+  public async chatInputMembers(interaction: Subcommand.ChatInputCommandInteraction) {
+    const discordGuildId = interaction.guildId!;
+    const name = interaction.options.getString('name', true);
+
+    await interaction.deferReply();
+
+    const cfg = await getConfig(discordGuildId);
+    const serverId = cfg.flyffServerId ?? DEFAULT_FLYFF_SERVER_ID;
+    const members = await listGuildMembers({ flyffServerId: serverId, guildName: name });
+
+    if (!members.length) {
+      const embed = new EmbedBuilder()
+        .setTitle('👥 ギルドメンバー')
+        .setDescription(`**${name}** のランキング上メンバーは見つかりませんでした。`)
+        .addFields({ name: 'server', value: String(serverId), inline: true })
+        .setColor(0x2b2d31)
+        .setFooter({ text: FOOTER_TEXT })
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    let page = 0;
+    const first = buildMembersEmbedForPage({ page, name, serverId, members });
+
+    await interaction.editReply({
+      embeds: [first.embed],
+      components:
+        first.totalPages > 1 ? [buildMembersRow(first.safePage, first.totalPages)] : [],
+    });
+
+    if (first.totalPages <= 1) return;
+
+    const msg = await interaction.fetchReply();
+
+    const collector = msg.createMessageComponentCollector({
+      componentType: ComponentType.Button,
+      time: 60_000,
+      filter: (i) => i.user.id === interaction.user.id,
+    });
+
+    collector.on('collect', async (btn) => {
+      try {
+        if (btn.customId === MEMBERS_BTN_PREV) page -= 1;
+        if (btn.customId === MEMBERS_BTN_NEXT) page += 1;
+
+        const next = buildMembersEmbedForPage({ page, name, serverId, members });
+        page = next.safePage;
+
+        await btn.update({
+          embeds: [next.embed],
+          components: [buildMembersRow(page, next.totalPages)],
+        });
+      } catch {
+        if (!btn.replied && !btn.deferred) {
+          await btn.deferUpdate().catch(() => {});
+        }
+      }
+    });
+
+    collector.on('end', async () => {
+      const cur = buildMembersEmbedForPage({ page, name, serverId, members });
+      await interaction
+        .editReply({
+          embeds: [cur.embed],
+          components: [buildMembersRow(cur.safePage, cur.totalPages, true)],
+        })
+        .catch(() => {});
+    });
+  }
+
   public override async autocompleteRun(interaction: Subcommand.AutocompleteInteraction) {
     // 只对 name 这个 option 做补全
     const focused = interaction.options.getFocused(true);
@@ -395,7 +565,7 @@ export class GuildCommand extends Subcommand {
 
     // 只在这些子命令启用补全（避免以后扩展时误触发）
     const sub = interaction.options.getSubcommand();
-    if (sub !== 'watch' && sub !== 'unwatch' && sub !== 'history') {
+    if (sub !== 'watch' && sub !== 'unwatch' && sub !== 'history' && sub !== 'members') {
       await interaction.respond([]);
       return;
     }
