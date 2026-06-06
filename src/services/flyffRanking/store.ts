@@ -161,6 +161,104 @@ export async function saveSnapshot(flyffServerId: number, players: PlayerRow[]) 
   });
 }
 
+function buildEventRows(
+  flyffServerId: number,
+  changes: Change[],
+  latestByPlayerId: Map<string, ScrapedPlayer>,
+) {
+  return changes.map((c) => {
+    if (c.type === 'guild') {
+      const p = latestByPlayerId.get(c.playerId);
+      return {
+        flyffServerId,
+        eventType: 'guild',
+        playerId: c.playerId,
+        username: c.username,
+        beforeValue: c.before ?? null,
+        afterValue: c.after ?? null,
+        rank: p?.rank ?? null,
+        level: p?.level ?? null,
+        job: p?.job ?? null,
+        flyffGuildName: p?.flyffGuildName ?? null,
+      };
+    }
+
+    const p = latestByPlayerId.get(c.playerId);
+
+    if (c.type === 'rename') {
+      return {
+        flyffServerId,
+        eventType: 'rename',
+        playerId: c.playerId,
+        username: c.afterName,
+        beforeName: c.beforeName,
+        afterName: c.afterName,
+        beforeValue: c.beforeGuild ?? null,
+        afterValue: c.afterGuild ?? null,
+        rank: p?.rank ?? null,
+        level: p?.level ?? null,
+        job: p?.job ?? null,
+        flyffGuildName: p?.flyffGuildName ?? null,
+      };
+    }
+
+    return {
+      flyffServerId,
+      eventType: 'suspected-rename',
+      playerId: c.playerId,
+      beforeName: c.beforeName,
+      afterName: c.afterName,
+      score: c.score ?? null,
+      reasonJson: JSON.stringify(c.reason ?? []),
+      beforeValue: c.beforeGuild ?? null,
+      afterValue: c.afterGuild ?? null,
+      rank: p?.rank ?? null,
+      level: p?.level ?? null,
+      job: p?.job ?? null,
+      flyffGuildName: p?.flyffGuildName ?? null,
+    };
+  });
+}
+
+function buildSnapshotRows(flyffServerId: number, players: PlayerRow[]) {
+  return players.map((p) => ({
+    flyffServerId,
+    playerId: p.playerId,
+    username: p.username,
+    rank: p.rank,
+    level: p.level,
+    job: p.job,
+    flyffGuildName: p.flyffGuildName,
+    playtime: p.playtime,
+    serverText: p.serverText,
+  }));
+}
+
+export async function persistChangesAndSnapshot(params: {
+  flyffServerId: number;
+  changes: Change[];
+  latestByPlayerId: Map<string, ScrapedPlayer>;
+  players: PlayerRow[];
+}) {
+  const { flyffServerId, changes, latestByPlayerId, players } = params;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.rankingSnapshot.deleteMany({ where: { flyffServerId } });
+
+    if (players.length) {
+      await tx.rankingSnapshot.createMany({
+        data: buildSnapshotRows(flyffServerId, players),
+      });
+    }
+
+    if (changes.length) {
+      await tx.rankingEvent.createMany({
+        data: buildEventRows(flyffServerId, changes, latestByPlayerId),
+      });
+    }
+  });
+}
+
 export async function listAllConfigs(): Promise<RankingConfig[]> {
   const rows = await prisma.rankingConfig.findMany();
 
@@ -180,59 +278,7 @@ export async function appendEvents(
   if (!changes.length) return;
 
   await prisma.rankingEvent.createMany({
-    data: changes.map((c) => {
-      if (c.type === 'guild') {
-        const p = latestByPlayerId.get(c.playerId);
-        return {
-          flyffServerId,
-          eventType: 'guild',
-          playerId: c.playerId,
-          username: c.username,
-          beforeValue: c.before ?? null,
-          afterValue: c.after ?? null,
-          rank: p?.rank ?? null,
-          level: p?.level ?? null,
-          job: p?.job ?? null,
-          flyffGuildName: p?.flyffGuildName ?? null,
-        };
-      }
-
-      const p = latestByPlayerId.get(c.playerId);
-
-      if (c.type === 'rename') {
-        return {
-          flyffServerId,
-          eventType: 'rename',
-          playerId: c.playerId,
-          username: c.afterName,
-          beforeName: c.beforeName,
-          afterName: c.afterName,
-          beforeValue: c.beforeGuild ?? null,
-          afterValue: c.afterGuild ?? null,
-          rank: p?.rank ?? null,
-          level: p?.level ?? null,
-          job: p?.job ?? null,
-          flyffGuildName: p?.flyffGuildName ?? null,
-        };
-      }
-
-      // suspected rename
-      return {
-        flyffServerId,
-        eventType: 'suspected-rename',
-        playerId: c.playerId,
-        beforeName: c.beforeName,
-        afterName: c.afterName,
-        score: c.score ?? null,
-        reasonJson: JSON.stringify(c.reason ?? []),
-        beforeValue: c.beforeGuild ?? null,
-        afterValue: c.afterGuild ?? null,
-        rank: p?.rank ?? null,
-        level: p?.level ?? null,
-        job: p?.job ?? null,
-        flyffGuildName: p?.flyffGuildName ?? null,
-      };
-    }),
+    data: buildEventRows(flyffServerId, changes, latestByPlayerId),
   });
 }
 

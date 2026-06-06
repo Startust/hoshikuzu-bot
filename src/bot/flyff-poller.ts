@@ -7,19 +7,42 @@ import {
   diffByPlayerId,
   filterChangesByWatched,
 } from '../services/flyffRanking/diff.js';
-import { fetchAllPlayers } from '../services/flyffRanking/scrape.js';
 import {
-  appendEvents,
+  fetchAllPlayers,
+  type ScrapedPlayer,
+} from '../services/flyffRanking/scrape.js';
+import {
   listAllConfigs, // 新增：返回所有有配置的 guild（哪怕没 enabled）
   listWatchedGuilds,
   loadSnapshot,
-  saveSnapshot,
+  persistChangesAndSnapshot,
   upsertDiscoveredGuilds,
 } from '../services/flyffRanking/store.js';
 
 const runningServer = new Set<number>();
 
 const DEFAULT_SERVER_IDS = [DEFAULT_FLYFF_SERVER_ID]; // 你想“默认扫描”的服务器列表；可扩展
+
+function dedupePlayersByPlayerId(players: ScrapedPlayer[]) {
+  const byPlayerId = new Map<string, ScrapedPlayer>();
+  const duplicates: ScrapedPlayer[] = [];
+
+  for (const player of players) {
+    const existing = byPlayerId.get(player.playerId);
+    if (!existing) {
+      byPlayerId.set(player.playerId, player);
+      continue;
+    }
+
+    duplicates.push(player);
+
+    if (!existing.rank || (player.rank && player.rank < existing.rank)) {
+      byPlayerId.set(player.playerId, player);
+    }
+  }
+
+  return { players: Array.from(byPlayerId.values()), duplicates };
+}
 
 export function startFlyffPoller(client: SapphireClient) {
   console.log(`[flyff poller] started at ${new Date().toISOString()}`);
@@ -64,24 +87,34 @@ async function scanServerAndNotifyGuilds(
   );
 
   const oldSnap = await loadSnapshot(serverId);
-  const latest = await fetchAllPlayers(serverId);
+  const fetched = await fetchAllPlayers(serverId);
+  const { players: latest, duplicates } = dedupePlayersByPlayerId(fetched);
 
-  console.log(`[flyff poller] server=${serverId} fetched ${latest.length} players`);
+  console.log(
+    `[flyff poller] server=${serverId} fetched ${fetched.length} players, unique=${latest.length}`,
+  );
 
-  // ✅ 1) 全量 diff + 记录事件（不看 watched/config）
-  const allChanges = diffByPlayerId(oldSnap, latest);
-  if (allChanges.length) {
-    const latestByPlayerId = new Map(latest.map((p) => [p.playerId, p]));
-    await appendEvents(serverId, allChanges, latestByPlayerId);
-    console.log(
-      `[flyff poller] server=${serverId} recorded ${allChanges.length} changes`,
+  if (duplicates.length) {
+    const sample = duplicates
+      .slice(0, 10)
+      .map((p) => `${p.playerId}:${p.username}#${p.rank}`)
+      .join(', ');
+    console.warn(
+      `[flyff poller] server=${serverId} dropped ${duplicates.length} duplicate player ids` +
+        (sample ? ` (${sample})` : ''),
     );
   }
 
-  // ✅ 2) 更新快照（无论是否推送）
-  await saveSnapshot(
-    serverId,
-    latest.map((p) => ({
+  // ✅ 1) 全量 diff（不看 watched/config）
+  const allChanges = diffByPlayerId(oldSnap, latest);
+
+  // ✅ 2) 原子化：快照和事件一起成功，避免快照失败后重复记录事件
+  const latestByPlayerId = new Map(latest.map((p) => [p.playerId, p]));
+  await persistChangesAndSnapshot({
+    flyffServerId: serverId,
+    changes: allChanges,
+    latestByPlayerId,
+    players: latest.map((p) => ({
       playerId: p.playerId,
       username: p.username,
       rank: p.rank,
@@ -91,7 +124,13 @@ async function scanServerAndNotifyGuilds(
       playtime: p.playtime,
       serverText: p.serverText,
     })),
-  );
+  });
+
+  if (allChanges.length) {
+    console.log(
+      `[flyff poller] server=${serverId} recorded ${allChanges.length} changes`,
+    );
+  }
 
   const guildNames = latest
     .map((p) => p.flyffGuildName)
