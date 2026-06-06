@@ -209,40 +209,13 @@ async function maybeNotifyGuild(
       continue;
     }
 
-    if (c.type === 'rename') {
-      const embed = new EmbedBuilder()
-        .setTitle('📝 改名')
-        .setDescription(`**${c.beforeName}** → **${c.afterName}**`)
-        .addFields(
-          { name: 'Player ID', value: c.playerId, inline: true },
-          { name: 'Before Guild', value: fmtGuild(c.beforeGuild), inline: true },
-          { name: 'After Guild', value: fmtGuild(c.afterGuild), inline: true },
-        )
-        .setFooter({
-          text:
-            `server=${cfg.flyffServerId}` +
-            `｜検出=${changes.length}件` +
-            (omitted > 0 ? `（未表示 ${omitted}件）` : '') +
-            `｜${i + 1}/${top.length}`,
-        })
-        .setTimestamp(new Date())
-        .setColor(0xfee75c);
-
-      await channel.send({ embeds: [embed] });
-      continue;
-    }
-
-    // suspected-rename
-    const reasons = safeJoinReasons(c.reason, 220);
-
     const embed = new EmbedBuilder()
-      .setTitle('⚠️ 改名の可能性')
+      .setTitle('📝 改名')
       .setDescription(`**${c.beforeName}** → **${c.afterName}**`)
       .addFields(
-        { name: 'Score', value: String(c.score), inline: true },
+        { name: 'Player ID', value: c.playerId, inline: true },
         { name: 'Before Guild', value: fmtGuild(c.beforeGuild), inline: true },
         { name: 'After Guild', value: fmtGuild(c.afterGuild), inline: true },
-        ...(reasons ? [{ name: '根拠', value: reasons }] : []),
       )
       .setFooter({
         text:
@@ -274,11 +247,4 @@ function classifyGuildChange(before: string | null, after: string | null) {
     return { emoji: '🔁', title: 'ギルド移籍', color: 0x5865f2 };
   }
   return { emoji: '📝', title: 'ギルド更新', color: 0x2b2d31 };
-}
-
-function safeJoinReasons(reason: string[] | undefined, maxLen = 200) {
-  if (!reason || reason.length === 0) return '';
-  const text = reason.join(', ');
-  if (text.length <= maxLen) return text;
-  return text.slice(0, maxLen - 1) + '…';
 }

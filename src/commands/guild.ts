@@ -125,25 +125,10 @@ function buildHistoryEmbedForPage(args: {
       continue;
     }
 
-    // rename / suspected-rename
+    // rename / legacy suspected-rename
     const beforeN = e.beforeName ?? '??';
     const afterN = e.afterName ?? '??';
-    const isSuspected = e.eventType === 'suspected-rename';
-    const score = e.score ?? 0;
-
-    let reasons: string[] = [];
-    try {
-      reasons = e.reasonJson ? JSON.parse(e.reasonJson) : [];
-    } catch {
-      /* empty */
-    }
-
-    const reasonText = reasons.length ? `根拠：${reasons.join(', ')}` : '';
-    const kind = isSuspected ? '⚠️' : '📝';
-    const line =
-      `• <t:${ts}:R> ${kind} **${beforeN}** → **${afterN}**` +
-      (isSuspected ? `（score=${score}）` : '') +
-      (reasonText ? `｜${reasonText}` : '');
+    const line = `• <t:${ts}:R> 📝 **${beforeN}** → **${afterN}**`;
 
     // 一行太长会很难看，轻微收敛
     renameLines.push(line.slice(0, 350));
@@ -165,7 +150,7 @@ function buildHistoryEmbedForPage(args: {
     )
     .addFields(
       { name: '🏰 ギルド変動', value: joinAndTrimLines(guildLines, 1024) },
-      { name: '⚠️ 改名の可能性', value: joinAndTrimLines(renameLines, 1024) },
+      { name: '📝 改名', value: joinAndTrimLines(renameLines, 1024) },
     )
     .setColor(color)
     .setFooter({ text: FOOTER_TEXT })

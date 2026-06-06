@@ -16,16 +16,6 @@ export type Change =
       afterName: string;
       beforeGuild: string | null;
       afterGuild: string | null;
-    }
-  | {
-      type: 'suspected-rename';
-      playerId: string;
-      beforeName: string;
-      afterName: string;
-      score: number;
-      reason: string[];
-      beforeGuild: string | null;
-      afterGuild: string | null;
     };
 
 function isWatchedRelated(
@@ -78,79 +68,7 @@ export function diffByPlayerId(
     }
   }
 
-  console.log(
-    `[diff] found ${changes.length} guild changes, checking for suspected renames...`,
-  );
-
-  // 2) 疑似改名（不传 watched => 全量记录）
-  const disappeared: PlayerRow[] = [];
-  const appeared: ScrapedPlayer[] = [];
-
-  for (const [playerId, old] of oldMap.entries()) {
-    if (!latestMap.has(playerId)) disappeared.push(old);
-  }
-  for (const p of latest) {
-    if (!oldMap.has(p.playerId)) appeared.push(p);
-  }
-
-  const threshold = 6; // 分数阈值，越高越保守
-  for (const old of disappeared) {
-    let best: { p: ScrapedPlayer; score: number; reason: string[] } | null = null;
-
-    for (const p of appeared) {
-      const reason: string[] = [];
-      let score = 0;
-
-      if (old.level && p.level && old.level === p.level) {
-        score += 2;
-        reason.push('level');
-      }
-      if (old.job && p.job && old.job === p.job) {
-        score += 2;
-        reason.push('job');
-      }
-      if (old.playtime && p.playtime && old.playtime === p.playtime) {
-        score += 3;
-        reason.push('playtime');
-      }
-      if (old.rank && p.rank && old.rank === p.rank) {
-        score += 1;
-        reason.push('rank');
-      }
-      if (
-        old.flyffGuildName &&
-        p.flyffGuildName &&
-        old.flyffGuildName === p.flyffGuildName
-      ) {
-        score += 1;
-        reason.push('guild');
-      }
-
-      if (!best || score > best.score) best = { p, score, reason };
-    }
-
-    if (best && best.score >= threshold) {
-      const beforeG = old.flyffGuildName ?? null;
-      const afterG = best.p.flyffGuildName ?? null;
-
-      if (isWatchedRelated(watchedGuilds, beforeG, afterG)) {
-        changes.push({
-          type: 'suspected-rename',
-          playerId: best.p.playerId,
-          beforeName: old.username,
-          afterName: best.p.username,
-          score: best.score,
-          reason: best.reason,
-          beforeGuild: beforeG,
-          afterGuild: afterG,
-        });
-      }
-    }
-  }
-
-  console.log(
-    `[diff] found ${changes.length} total changes (including suspected renames)`,
-  );
+  console.log(`[diff] found ${changes.length} changes`);
 
   return changes;
 }

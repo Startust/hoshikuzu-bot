@@ -185,31 +185,13 @@ function buildEventRows(
 
     const p = latestByPlayerId.get(c.playerId);
 
-    if (c.type === 'rename') {
-      return {
-        flyffServerId,
-        eventType: 'rename',
-        playerId: c.playerId,
-        username: c.afterName,
-        beforeName: c.beforeName,
-        afterName: c.afterName,
-        beforeValue: c.beforeGuild ?? null,
-        afterValue: c.afterGuild ?? null,
-        rank: p?.rank ?? null,
-        level: p?.level ?? null,
-        job: p?.job ?? null,
-        flyffGuildName: p?.flyffGuildName ?? null,
-      };
-    }
-
     return {
       flyffServerId,
-      eventType: 'suspected-rename',
+      eventType: 'rename',
       playerId: c.playerId,
+      username: c.afterName,
       beforeName: c.beforeName,
       afterName: c.afterName,
-      score: c.score ?? null,
-      reasonJson: JSON.stringify(c.reason ?? []),
       beforeValue: c.beforeGuild ?? null,
       afterValue: c.afterGuild ?? null,
       rank: p?.rank ?? null,
