@@ -4,6 +4,7 @@ import { Subcommand } from '@sapphire/plugin-subcommands';
 import {
   ChannelType,
   EmbedBuilder,
+  PermissionFlagsBits,
   type SlashCommandBuilder,
   type TextChannel,
 } from 'discord.js';
@@ -24,6 +25,7 @@ export class RankCommand extends Subcommand {
       builder
         .setName('rank')
         .setDescription('Flyffランキング監視')
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addSubcommand((sc) =>
           sc
             .setName('channel')
@@ -47,6 +49,14 @@ export class RankCommand extends Subcommand {
   }
 
   public async chatInputChannel(interaction: Command.ChatInputCommandInteraction) {
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+      await interaction.reply({
+        content: 'このコマンドを実行するにはサーバー管理権限が必要です。',
+        flags: ['Ephemeral'],
+      });
+      return;
+    }
+
     const ch = interaction.options.getChannel('target', true);
     const discordGuildId = interaction.guildId!;
 

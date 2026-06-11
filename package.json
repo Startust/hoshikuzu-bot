@@ -19,12 +19,10 @@
     "@sapphire/plugin-scheduled-tasks": "^10.0.4",
     "@sapphire/plugin-subcommands": "^7.0.1",
     "cheerio": "^1.1.2",
-    "discord.js": "^14.25.1",
+    "discord.js": "14.26.4",
     "dotenv": "^17.2.3",
     "openai": "^6.15.0",
-    "sqlite": "^5.1.1",
-    "sqlite3": "^5.1.7",
-    "undici": "^7.18.2"
+    "undici": "7.27.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
@@ -37,6 +35,15 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.51.0"
+  },
+  "resolutions": {
+    "@discordjs/builders": "1.14.1",
+    "@discordjs/ws/**/undici": "6.24.1",
+    "cheerio/undici": "7.27.2",
+    "discord.js/@discordjs/ws/**/undici": "6.24.1",
+    "lodash": "4.18.1",
+    "uuid": "11.1.1",
+    "ws": "8.21.0"
   },
   "license": "MIT"
 }

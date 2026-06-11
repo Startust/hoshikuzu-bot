@@ -25,6 +25,7 @@ function isValidGuildId(id: string): boolean {
 })
 export class AllowlistCommand extends Subcommand {
   private readonly adminGuildId = process.env.ALLOWLIST_ADMIN_GUILD_ID;
+  private readonly adminUserId = process.env.ALLOWLIST_ADMIN_USER_ID;
 
   public override registerApplicationCommands(registry: Subcommand.Registry) {
     if (!this.adminGuildId) {
@@ -32,6 +33,11 @@ export class AllowlistCommand extends Subcommand {
         '[allowlist] ALLOWLIST_ADMIN_GUILD_ID not set, command will NOT be registered',
       );
       return;
+    }
+    if (!this.adminUserId) {
+      this.container.logger.warn(
+        '[allowlist] ALLOWLIST_ADMIN_USER_ID not set, command will deny all users',
+      );
     }
 
     const command = (builder: SlashCommandBuilder) =>
@@ -82,7 +88,31 @@ export class AllowlistCommand extends Subcommand {
     });
   }
 
+  private async ensureAdminUser(
+    interaction: Command.ChatInputCommandInteraction,
+  ): Promise<boolean> {
+    if (!this.adminUserId) {
+      await interaction.reply({
+        content: 'ALLOWLIST_ADMIN_USER_ID is not configured.',
+        flags: ['Ephemeral'],
+      });
+      return false;
+    }
+
+    if (interaction.user.id !== this.adminUserId) {
+      await interaction.reply({
+        content: 'このコマンドを実行する権限がありません。',
+        flags: ['Ephemeral'],
+      });
+      return false;
+    }
+
+    return true;
+  }
+
   public async chatInputAdd(interaction: Command.ChatInputCommandInteraction) {
+    if (!(await this.ensureAdminUser(interaction))) return;
+
     const guildId = interaction.options.getString('guild_id', true).trim();
     const note = interaction.options.getString('note')?.trim();
 
@@ -103,6 +133,8 @@ export class AllowlistCommand extends Subcommand {
   }
 
   public async chatInputRemove(interaction: Command.ChatInputCommandInteraction) {
+    if (!(await this.ensureAdminUser(interaction))) return;
+
     const guildId = interaction.options.getString('guild_id', true).trim();
 
     if (!isValidGuildId(guildId)) {
@@ -122,6 +154,8 @@ export class AllowlistCommand extends Subcommand {
   }
 
   public async chatInputList(interaction: Command.ChatInputCommandInteraction) {
+    if (!(await this.ensureAdminUser(interaction))) return;
+
     const limit = interaction.options.getInteger('limit') ?? 20;
 
     const rows = await listAllowedGuilds();
