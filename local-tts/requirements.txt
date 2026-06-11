@@ -1,0 +1,9 @@
+pydantic==2.10.4
+python-dotenv==1.0.1
+soundfile==0.12.1
+numpy>=1.26,<3
+voxcpm
+pypinyin==0.53.0
+mysql-connector-python==9.1.0
+SudachiPy>=0.6,<0.7
+SudachiDict-core>=2026.4

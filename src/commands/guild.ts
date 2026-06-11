@@ -21,6 +21,7 @@ import {
   unwatchGuild,
   watchGuild,
 } from '../services/flyffRanking/store.js';
+import { listPronunciationUrls } from '../services/playerNamePronunciation.js';
 
 const FOOTER_TEXT = 'Flyff Guild Watcher';
 
@@ -114,24 +115,37 @@ function clipCell(value: string | number | null | undefined, max: number) {
   return chars.slice(0, Math.max(1, max - 1)).join('') + '…';
 }
 
-function padCell(value: string | number | null | undefined, width: number, max = width) {
-  const text = clipCell(value, max);
-  return text + ' '.repeat(Math.max(0, width - text.length));
+function escapeMarkdownTableCell(value: string | number | null | undefined) {
+  return String(value ?? '-')
+    .replace(/\\/g, '\\\\')
+    .replace(/\|/g, '\\|')
+    .replace(/\[/g, '\\[')
+    .replace(/\]/g, '\\]')
+    .replace(/\n/g, ' ')
+    .trim();
 }
 
-function buildMembersTable(members: GuildMemberRow[]) {
-  const header = `${padCell('Rank', 6)} ${padCell('Name', 18)} ${padCell('Lv', 4)} ${padCell('Job', 14)} Playtime`;
-  const lines = members.map((m) =>
-    [
-      padCell(`#${m.rank}`, 6),
-      padCell(m.username, 18, 18),
-      padCell(m.level, 4),
-      padCell(m.job, 14, 14),
-      clipCell(m.playtime, 16),
-    ].join(' '),
-  );
+function buildMembersTable(
+  members: GuildMemberRow[],
+  pronunciationUrls: Map<string, string>,
+) {
+  const lines: string[] = [];
 
-  return ['```text', header, ...lines, '```'].join('\n');
+  for (const member of members) {
+    const url = pronunciationUrls.get(member.username);
+    const pronunciation = url ? `[🔊](${url})` : '-';
+
+    lines.push(
+      [
+        escapeMarkdownTableCell(clipCell(member.username, 18)),
+        escapeMarkdownTableCell(member.level),
+        escapeMarkdownTableCell(clipCell(member.job, 14)),
+        pronunciation,
+      ].join(' | '),
+    );
+  }
+
+  return lines.join('\n');
 }
 
 function buildMembersEmbedForPage(args: {
@@ -139,8 +153,9 @@ function buildMembersEmbedForPage(args: {
   name: string;
   serverId: number;
   members: GuildMemberRow[];
+  pronunciationUrls: Map<string, string>;
 }) {
-  const { page, name, serverId, members } = args;
+  const { page, name, serverId, members, pronunciationUrls } = args;
 
   const totalPages = Math.max(1, Math.ceil(members.length / MEMBERS_PAGE_SIZE));
   const safePage = Math.min(Math.max(page, 0), totalPages - 1);
@@ -160,7 +175,7 @@ function buildMembersEmbedForPage(args: {
   const embed = new EmbedBuilder()
     .setTitle(`👥 メンバー：${name}`)
     .setDescription(
-      `server=${serverId}｜合計 ${members.length} 人｜ページ ${safePage + 1}/${totalPages}（${MEMBERS_PAGE_SIZE}人/ページ）${updatedText}\n${buildMembersTable(slice)}`,
+      `server=${serverId}｜合計 ${members.length} 人｜ページ ${safePage + 1}/${totalPages}（${MEMBERS_PAGE_SIZE}人/ページ）${updatedText}\n${buildMembersTable(slice, pronunciationUrls)}`,
     )
     .setColor(0x5865f2)
     .setFooter({ text: FOOTER_TEXT })
@@ -507,7 +522,16 @@ export class GuildCommand extends Subcommand {
     }
 
     let page = 0;
-    const first = buildMembersEmbedForPage({ page, name, serverId, members });
+    const pronunciationUrls = await listPronunciationUrls(
+      members.map((member) => member.username),
+    );
+    const first = buildMembersEmbedForPage({
+      page,
+      name,
+      serverId,
+      members,
+      pronunciationUrls,
+    });
 
     await interaction.editReply({
       embeds: [first.embed],
@@ -530,7 +554,13 @@ export class GuildCommand extends Subcommand {
         if (btn.customId === MEMBERS_BTN_PREV) page -= 1;
         if (btn.customId === MEMBERS_BTN_NEXT) page += 1;
 
-        const next = buildMembersEmbedForPage({ page, name, serverId, members });
+        const next = buildMembersEmbedForPage({
+          page,
+          name,
+          serverId,
+          members,
+          pronunciationUrls,
+        });
         page = next.safePage;
 
         await btn.update({
@@ -545,7 +575,13 @@ export class GuildCommand extends Subcommand {
     });
 
     collector.on('end', async () => {
-      const cur = buildMembersEmbedForPage({ page, name, serverId, members });
+      const cur = buildMembersEmbedForPage({
+        page,
+        name,
+        serverId,
+        members,
+        pronunciationUrls,
+      });
       await interaction
         .editReply({
           embeds: [cur.embed],

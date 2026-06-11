@@ -6,7 +6,15 @@ import simpleImportSort from 'eslint-plugin-simple-import-sort';
 export default [
   // 忽略项
   {
-    ignores: ['dist/**', 'node_modules/**', '.railway/**', 'coverage/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      '.railway/**',
+      'coverage/**',
+      'local-tts/.venv/**',
+      'local-tts/data/**',
+      'local-tts/logs/**',
+    ],
   },
 
   // JS 推荐规则
