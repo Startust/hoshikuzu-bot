@@ -115,7 +115,7 @@ model RankingEvent {
   eventType     String @map("event_type") @db.VarChar(16) // "guild" | "rename"
 
   // 对 guild 变动：username 有意义；对 rename：beforeName/afterName 有意义
-  playerId   String? @map("player_id") @db.VarChar(32)
+  playerId    String? @map("player_id") @db.VarChar(32)
   username    String? @db.VarChar(64)
   beforeValue String? @map("before_value") @db.VarChar(128)
   afterValue  String? @map("after_value") @db.VarChar(128)
@@ -157,4 +157,20 @@ model GuildAllowlist {
   createdAt      DateTime @default(now()) @map("created_at")
 
   @@map("guild_allowlist")
+}
+
+model PlayerNamePronunciation {
+  username    String    @id @db.VarChar(64)
+  audioUrl    String?   @map("audio_url") @db.VarChar(768)
+  audioFormat String?   @default("wav") @map("audio_format") @db.VarChar(16)
+  ttsText     String?   @map("tts_text") @db.VarChar(256)
+  sourceHash  String?   @map("source_hash") @db.VarChar(64)
+  generatedAt DateTime? @map("generated_at") @db.DateTime(3)
+  lastError   String?   @map("last_error") @db.Text
+  failedAt    DateTime? @map("failed_at") @db.DateTime(3)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+
+  @@index([generatedAt], name: "idx_pronunciation_generated_at")
+  @@index([failedAt], name: "idx_pronunciation_failed_at")
+  @@map("player_name_pronunciation")
 }

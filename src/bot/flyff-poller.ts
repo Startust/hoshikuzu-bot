@@ -1,5 +1,11 @@
 import type { SapphireClient } from '@sapphire/framework';
-import { ChannelType, EmbedBuilder } from 'discord.js';
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ChannelType,
+  EmbedBuilder,
+} from 'discord.js';
 
 import { DEFAULT_FLYFF_SERVER_ID } from '../services/flyffRanking/constants.js';
 import {
@@ -18,10 +24,12 @@ import {
   persistChangesAndSnapshot,
   upsertDiscoveredGuilds,
 } from '../services/flyffRanking/store.js';
+import { listPronunciationUrls } from '../services/playerNamePronunciation.js';
 
 const runningServer = new Set<number>();
 
 const DEFAULT_SERVER_IDS = [DEFAULT_FLYFF_SERVER_ID]; // 你想“默认扫描”的服务器列表；可扩展
+const PRONUNCIATION_BUTTON_LABEL = '発音を聞く';
 
 function dedupePlayersByPlayerId(players: ScrapedPlayer[]) {
   const byPlayerId = new Map<string, ScrapedPlayer>();
@@ -180,6 +188,14 @@ async function maybeNotifyGuild(
     `[flyff poller] server=${cfg.flyffServerId} guild=${cfg.discordGuildId} found ${changes.length} changes, notifying...`,
   );
 
+  const pronunciationUrls = await listPronunciationUrls(
+    top.flatMap((change) =>
+      change.type === 'guild'
+        ? [change.username]
+        : [change.beforeName, change.afterName],
+    ),
+  );
+
   for (let i = 0; i < top.length; i++) {
     const c = top[i];
 
@@ -205,7 +221,15 @@ async function maybeNotifyGuild(
         .setTimestamp(new Date())
         .setColor(meta.color);
 
-      await channel.send({ embeds: [embed] });
+      await channel.send({
+        embeds: [embed],
+        components: buildPronunciationComponents([
+          {
+            label: PRONUNCIATION_BUTTON_LABEL,
+            url: pronunciationUrls.get(c.username),
+          },
+        ]),
+      });
       continue;
     }
 
@@ -227,7 +251,13 @@ async function maybeNotifyGuild(
       .setTimestamp(new Date())
       .setColor(0xfee75c);
 
-    await channel.send({ embeds: [embed] });
+    await channel.send({
+      embeds: [embed],
+      components: buildPronunciationComponents([
+        { label: 'Before の発音', url: pronunciationUrls.get(c.beforeName) },
+        { label: 'After の発音', url: pronunciationUrls.get(c.afterName) },
+      ]),
+    });
   }
 }
 
@@ -247,4 +277,22 @@ function classifyGuildChange(before: string | null, after: string | null) {
     return { emoji: '🔁', title: 'ギルド移籍', color: 0x5865f2 };
   }
   return { emoji: '📝', title: 'ギルド更新', color: 0x2b2d31 };
+}
+
+function buildPronunciationComponents(
+  links: Array<{ label: string; url: string | undefined }>,
+) {
+  const buttons = links
+    .filter((link): link is { label: string; url: string } => !!link.url)
+    .slice(0, 5)
+    .map((link) =>
+      new ButtonBuilder()
+        .setLabel(link.label)
+        .setStyle(ButtonStyle.Link)
+        .setURL(link.url),
+    );
+
+  if (!buttons.length) return [];
+
+  return [new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons)];
 }

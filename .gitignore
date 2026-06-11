@@ -135,3 +135,7 @@ dist
 .env
 
 /src/generated/prisma
+
+local-tts/.venv/
+local-tts/logs/
+local-tts/**/__pycache__/
