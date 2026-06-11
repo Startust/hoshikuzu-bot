@@ -6,6 +6,7 @@ import {
   ButtonStyle,
   ComponentType,
   EmbedBuilder,
+  PermissionFlagsBits,
   type SlashCommandBuilder,
 } from 'discord.js';
 
@@ -70,6 +71,20 @@ function toAutocompleteChoice(name: string) {
     name: Array.from(value).slice(0, DISCORD_CHOICE_NAME_MAX).join(''),
     value,
   };
+}
+
+async function ensureManageGuild(
+  interaction: Subcommand.ChatInputCommandInteraction,
+): Promise<boolean> {
+  if (interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+    return true;
+  }
+
+  await interaction.reply({
+    content: 'このコマンドを実行するにはサーバー管理権限が必要です。',
+    flags: ['Ephemeral'],
+  });
+  return false;
 }
 
 function buildHistoryRow(page: number, totalPages: number, disabled = false) {
@@ -348,6 +363,8 @@ export class GuildCommand extends Subcommand {
   }
 
   public async chatInputWatch(interaction: Subcommand.ChatInputCommandInteraction) {
+    if (!(await ensureManageGuild(interaction))) return;
+
     const discordGuildId = interaction.guildId!;
     const name = interaction.options.getString('name', true).trim();
 
@@ -369,6 +386,8 @@ export class GuildCommand extends Subcommand {
   }
 
   public async chatInputUnwatch(interaction: Subcommand.ChatInputCommandInteraction) {
+    if (!(await ensureManageGuild(interaction))) return;
+
     const discordGuildId = interaction.guildId!;
     const name = interaction.options.getString('name', true).trim();
 

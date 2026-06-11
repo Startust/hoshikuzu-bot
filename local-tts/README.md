@@ -32,12 +32,12 @@ conservatively: the job accepts whole proper-name matches, or names beginning
 with a multi-kanji Japanese surname such as `小鳥遊` or `坂井`. Ordinary Chinese
 names fall back to pinyin phoneme input.
 
-Copy `.env.example` to `.env` if setup did not already do it. The default S3
-settings created for this project are:
+Copy `.env.example` to `.env` if setup did not already do it. Configure S3
+settings for your deployment:
 
 ```dotenv
 LOCAL_TTS_AWS_PROFILE=default
-LOCAL_TTS_S3_BUCKET=hoshikuzu-pronunciation-audio-202884737802
+LOCAL_TTS_S3_BUCKET=your-pronunciation-audio-bucket
 LOCAL_TTS_S3_REGION=us-east-2
 LOCAL_TTS_S3_PREFIX=audio
 ```
@@ -74,10 +74,7 @@ Remove the scheduled task:
 - Audio cache lives in `data\audio`.
 - Model cache lives in `data\models`.
 - Reference voice lives in `data\reference`.
-- If the Amitaro reference is used again, it requires visible credit in the bot/site/app:
-  `音声素材：あみたろの声素材工房（https://amitaro.net/）`.
-  Do not hotlink Amitaro source audio files.
-- Generated audio is uploaded to `s3://hoshikuzu-pronunciation-audio-202884737802/audio/`.
+- Generated audio is uploaded to `s3://<LOCAL_TTS_S3_BUCKET>/<LOCAL_TTS_S3_PREFIX>/`.
 - Public URLs include `?v=<source_hash>` to avoid long-lived cached audio after
   regeneration.
 - Output is RMS-normalized before upload for more consistent playback volume.
