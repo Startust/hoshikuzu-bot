@@ -17,8 +17,11 @@ import {
   type GuildMemberRow,
   listGuildHistoryEvents,
   listGuildMembers,
+  listPlayerHistoryEvents,
   listWatchedGuilds,
+  type PlayerHistoryRow,
   searchDiscoveredGuilds,
+  searchKnownPlayers,
   unwatchGuild,
   watchGuild,
 } from '../services/flyffRanking/store.js';
@@ -274,6 +277,81 @@ function buildHistoryEmbedForPage(args: {
   return { embed, safePage, totalPages };
 }
 
+function buildPlayerHistoryEmbedForPage(args: {
+  page: number;
+  name: string;
+  serverId: number;
+  events: PlayerHistoryRow[];
+}) {
+  const { page, name, serverId, events } = args;
+
+  const totalPages = Math.max(1, Math.ceil(events.length / HISTORY_PAGE_SIZE));
+  const safePage = Math.min(Math.max(page, 0), totalPages - 1);
+
+  const slice = events.slice(
+    safePage * HISTORY_PAGE_SIZE,
+    safePage * HISTORY_PAGE_SIZE + HISTORY_PAGE_SIZE,
+  );
+
+  const guildLines: string[] = [];
+  const renameLines: string[] = [];
+
+  for (const e of slice) {
+    const ts = Math.floor(e.createdAt.getTime() / 1000);
+
+    if (e.eventType === 'guild') {
+      const before = e.beforeValue ?? null;
+      const after = e.afterValue ?? null;
+      const meta = classifyGuild(before, after);
+
+      const extra: string[] = [];
+      if (e.rank != null) extra.push(`#${e.rank}`);
+      if (e.level != null) extra.push(`Lv.${e.level}`);
+      if (e.job) extra.push(e.job);
+      const suffix = extra.length ? `（${extra.join(' / ')}）` : '';
+
+      guildLines.push(
+        `• <t:${ts}:R> ${meta.emoji} ${meta.label}：${fmtGuild(before)} → ${fmtGuild(after)} ${suffix}`.trim(),
+      );
+      continue;
+    }
+
+    const beforeN = e.beforeName ?? '??';
+    const afterN = e.afterName ?? '??';
+    const beforeGuild = e.beforeValue ?? null;
+    const afterGuild = e.afterValue ?? null;
+    const guildText =
+      beforeGuild || afterGuild ? `（${fmtGuild(beforeGuild)} → ${fmtGuild(afterGuild)}）` : '';
+
+    renameLines.push(
+      `• <t:${ts}:R> 📝 **${beforeN}** → **${afterN}** ${guildText}`.trim().slice(0, 350),
+    );
+  }
+
+  const hasRename = slice.some((e) => e.eventType !== 'guild');
+  const firstGuild = slice.find((e) => e.eventType === 'guild');
+  const color = hasRename
+    ? 0xfee75c
+    : firstGuild
+      ? classifyGuild(firstGuild.beforeValue ?? null, firstGuild.afterValue ?? null).color
+      : 0x2b2d31;
+
+  const embed = new EmbedBuilder()
+    .setTitle(`🕘 プレイヤー履歴：${name}`)
+    .setDescription(
+      `server=${serverId}｜合計 ${events.length} 件｜ページ ${safePage + 1}/${totalPages}（${HISTORY_PAGE_SIZE}件/ページ）`,
+    )
+    .addFields(
+      { name: '🏰 ギルド変動', value: joinAndTrimLines(guildLines, 1024) },
+      { name: '📝 改名', value: joinAndTrimLines(renameLines, 1024) },
+    )
+    .setColor(color)
+    .setFooter({ text: FOOTER_TEXT })
+    .setTimestamp();
+
+  return { embed, safePage, totalPages };
+}
+
 @ApplyOptions<Subcommand.Options>({
   name: 'guild',
   description: 'フリフギルド監視管理',
@@ -282,6 +360,7 @@ function buildHistoryEmbedForPage(args: {
     { name: 'unwatch', chatInputRun: 'chatInputUnwatch' },
     { name: 'list', chatInputRun: 'chatInputList' },
     { name: 'history', chatInputRun: 'chatInputHistory' },
+    { name: 'player-history', chatInputRun: 'chatInputPlayerHistory' },
     { name: 'members', chatInputRun: 'chatInputMembers' },
   ],
 })
@@ -329,6 +408,25 @@ export class GuildCommand extends Subcommand {
               o
                 .setName('name')
                 .setDescription('ギルド名')
+                .setRequired(true)
+                .setAutocomplete(true),
+            )
+            .addIntegerOption((o) =>
+              o
+                .setName('limit')
+                .setDescription('表示件数（デフォルト20、最大50）')
+                .setMinValue(1)
+                .setMaxValue(50),
+            ),
+        )
+        .addSubcommand((sc) =>
+          sc
+            .setName('player-history')
+            .setDescription('指定した Flyff プレイヤーのギルド・改名履歴を表示')
+            .addStringOption((o) =>
+              o
+                .setName('name')
+                .setDescription('プレイヤー名')
                 .setRequired(true)
                 .setAutocomplete(true),
             )
@@ -517,6 +615,85 @@ export class GuildCommand extends Subcommand {
     });
   }
 
+  public async chatInputPlayerHistory(interaction: Subcommand.ChatInputCommandInteraction) {
+    const discordGuildId = interaction.guildId!;
+    const name = interaction.options.getString('name', true);
+    const limit = Math.min(interaction.options.getInteger('limit') ?? 20, 50);
+
+    await interaction.deferReply();
+
+    const cfg = await getConfig(discordGuildId);
+    const serverId = cfg.flyffServerId ?? DEFAULT_FLYFF_SERVER_ID;
+
+    const events = await listPlayerHistoryEvents({
+      flyffServerId: serverId,
+      playerName: name,
+      limit,
+    });
+
+    if (!events.length) {
+      const embed = new EmbedBuilder()
+        .setTitle('🕘 プレイヤー履歴')
+        .setDescription(`**${name}** の履歴は見つかりませんでした。`)
+        .addFields({ name: 'server', value: String(serverId), inline: true })
+        .setColor(0x2b2d31)
+        .setFooter({ text: FOOTER_TEXT })
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    let page = 0;
+
+    const first = buildPlayerHistoryEmbedForPage({ page, name, serverId, events });
+
+    await interaction.editReply({
+      embeds: [first.embed],
+      components:
+        first.totalPages > 1 ? [buildHistoryRow(first.safePage, first.totalPages)] : [],
+    });
+
+    if (first.totalPages <= 1) return;
+
+    const msg = await interaction.fetchReply();
+
+    const collector = msg.createMessageComponentCollector({
+      componentType: ComponentType.Button,
+      time: 60_000,
+      filter: (i) => i.user.id === interaction.user.id,
+    });
+
+    collector.on('collect', async (btn) => {
+      try {
+        if (btn.customId === HISTORY_BTN_PREV) page -= 1;
+        if (btn.customId === HISTORY_BTN_NEXT) page += 1;
+
+        const next = buildPlayerHistoryEmbedForPage({ page, name, serverId, events });
+        page = next.safePage;
+
+        await btn.update({
+          embeds: [next.embed],
+          components: [buildHistoryRow(page, next.totalPages)],
+        });
+      } catch {
+        if (!btn.replied && !btn.deferred) {
+          await btn.deferUpdate().catch(() => {});
+        }
+      }
+    });
+
+    collector.on('end', async () => {
+      const cur = buildPlayerHistoryEmbedForPage({ page, name, serverId, events });
+      await interaction
+        .editReply({
+          embeds: [cur.embed],
+          components: [buildHistoryRow(cur.safePage, cur.totalPages, true)],
+        })
+        .catch(() => {});
+    });
+  }
+
   public async chatInputMembers(interaction: Subcommand.ChatInputCommandInteraction) {
     const discordGuildId = interaction.guildId!;
     const name = interaction.options.getString('name', true);
@@ -620,7 +797,13 @@ export class GuildCommand extends Subcommand {
 
     // 只在这些子命令启用补全（避免以后扩展时误触发）
     const sub = interaction.options.getSubcommand();
-    if (sub !== 'watch' && sub !== 'unwatch' && sub !== 'history' && sub !== 'members') {
+    if (
+      sub !== 'watch' &&
+      sub !== 'unwatch' &&
+      sub !== 'history' &&
+      sub !== 'player-history' &&
+      sub !== 'members'
+    ) {
       await interaction.respond([]);
       return;
     }
@@ -632,7 +815,10 @@ export class GuildCommand extends Subcommand {
     const cfg = await getConfig(discordGuildId);
     const flyffServerId = cfg.flyffServerId ?? DEFAULT_FLYFF_SERVER_ID;
 
-    const items = await searchDiscoveredGuilds(flyffServerId, q, 25);
+    const items =
+      sub === 'player-history'
+        ? await searchKnownPlayers(flyffServerId, q, 25)
+        : await searchDiscoveredGuilds(flyffServerId, q, 25);
 
     await interaction.respond(items.map(toAutocompleteChoice).filter((x) => x !== null));
   }
