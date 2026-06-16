@@ -9,6 +9,7 @@ Discord bot for Hoshikuzu Flyff Universe guild monitoring and lookup.
   - `/guild unwatch name:<guild>` removes a followed guild.
   - `/guild list` shows followed guilds.
   - `/guild history name:<guild>` shows recent join, leave, transfer, and rename history.
+  - `/guild player-history name:<player>` shows a player's join, leave, transfer, and rename history.
   - `/guild members name:<guild>` shows the current ranking-backed member list.
   - `/rank channel target:<channel>` sets the notification channel.
 - Periodic Flyff ranking polling.

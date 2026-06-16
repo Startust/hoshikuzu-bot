@@ -302,6 +302,8 @@ export type GuildHistoryRow = {
   job: string | null;
 };
 
+export type PlayerHistoryRow = GuildHistoryRow;
+
 export type GuildMemberRow = {
   playerId: string;
   username: string;
@@ -391,6 +393,146 @@ export async function listGuildHistoryEvents(params: {
     ...r,
     eventType: toHistoryEventType(r.eventType),
   }));
+}
+
+async function findPlayerIdsByName(flyffServerId: number, playerName: string) {
+  const [snapshotRows, eventRows] = await Promise.all([
+    prisma.rankingSnapshot.findMany({
+      where: { flyffServerId, username: playerName },
+      take: 25,
+      select: { playerId: true },
+    }),
+    prisma.rankingEvent.findMany({
+      where: {
+        flyffServerId,
+        OR: [
+          { username: playerName },
+          { beforeName: playerName },
+          { afterName: playerName },
+        ],
+      },
+      take: 50,
+      select: { playerId: true },
+    }),
+  ]);
+
+  return Array.from(
+    new Set(
+      [...snapshotRows, ...eventRows]
+        .map((row) => row.playerId)
+        .filter((playerId): playerId is string => Boolean(playerId)),
+    ),
+  );
+}
+
+export async function listPlayerHistoryEvents(params: {
+  flyffServerId: number;
+  playerName: string;
+  limit: number;
+}): Promise<PlayerHistoryRow[]> {
+  const { flyffServerId, playerName } = params;
+  const limit = Math.min(Math.max(params.limit, 1), 50);
+  const playerIds = await findPlayerIdsByName(flyffServerId, playerName);
+
+  const rows = await prisma.rankingEvent.findMany({
+    where: {
+      flyffServerId,
+      OR: [
+        ...(playerIds.length ? [{ playerId: { in: playerIds } }] : []),
+        { username: playerName },
+        { beforeName: playerName },
+        { afterName: playerName },
+      ],
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    select: {
+      createdAt: true,
+      eventType: true,
+      playerId: true,
+      username: true,
+      beforeValue: true,
+      afterValue: true,
+      beforeName: true,
+      afterName: true,
+      score: true,
+      reasonJson: true,
+      rank: true,
+      level: true,
+      job: true,
+    },
+  });
+
+  return rows.map((r) => ({
+    ...r,
+    eventType: toHistoryEventType(r.eventType),
+  }));
+}
+
+export async function searchKnownPlayers(
+  flyffServerId: number,
+  q: string,
+  limit = 25,
+): Promise<string[]> {
+  const query = q.trim();
+  const names: string[] = [];
+
+  const pushName = (name: string | null) => {
+    const trimmed = name?.trim();
+    if (trimmed && !names.includes(trimmed)) names.push(trimmed);
+  };
+
+  const snapshotRows = await prisma.rankingSnapshot.findMany({
+    where: {
+      flyffServerId,
+      ...(query ? { username: { contains: query } } : {}),
+    },
+    orderBy: { rank: 'asc' },
+    take: limit,
+    select: { username: true },
+  });
+
+  for (const row of snapshotRows) pushName(row.username);
+  if (names.length >= limit) return names.slice(0, limit);
+
+  const eventRows = await prisma.rankingEvent.findMany({
+    where: {
+      flyffServerId,
+      ...(query
+        ? {
+            OR: [
+              { username: { contains: query } },
+              { beforeName: { contains: query } },
+              { afterName: { contains: query } },
+            ],
+          }
+        : {}),
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit * 3,
+    select: {
+      username: true,
+      beforeName: true,
+      afterName: true,
+    },
+  });
+
+  for (const row of eventRows) {
+    pushName(row.username);
+    pushName(row.beforeName);
+    pushName(row.afterName);
+    if (names.length >= limit) break;
+  }
+
+  const lower = query.toLowerCase();
+  return names
+    .sort((a, b) => {
+      if (!lower) return 0;
+      const ap = a.toLowerCase().startsWith(lower) ? 0 : 1;
+      const bp = b.toLowerCase().startsWith(lower) ? 0 : 1;
+      return ap - bp;
+    })
+    .slice(0, limit);
 }
 
 export async function upsertDiscoveredGuilds(flyffServerId: number, names: string[]) {
