@@ -152,7 +152,7 @@ async function scanServerAndNotifyGuilds(
     (c) => (c.flyffServerId ?? DEFAULT_FLYFF_SERVER_ID) === serverId,
   );
   for (const cfg of guildConfigs) {
-    await maybeNotifyGuild(client, cfg, allChanges);
+    await maybeNotifyGuild(client, cfg, allChanges, latestByPlayerId);
   }
 }
 
@@ -164,6 +164,7 @@ async function maybeNotifyGuild(
     flyffServerId: number;
   },
   allChanges: Change[],
+  latestByPlayerId: Map<string, ScrapedPlayer>,
 ) {
   // 没设推送频道就不发（但扫描和快照已完成）
   if (!cfg.notifyChannelId) return;
@@ -203,6 +204,7 @@ async function maybeNotifyGuild(
 
     if (c.type === 'guild') {
       const meta = classifyGuildChange(c.before, c.after);
+      const player = latestByPlayerId.get(c.playerId);
 
       const embed = new EmbedBuilder()
         .setTitle(`${meta.emoji} ${meta.title}`)
@@ -210,6 +212,8 @@ async function maybeNotifyGuild(
         .addFields(
           { name: 'Before', value: fmtGuild(c.before), inline: true },
           { name: 'After', value: fmtGuild(c.after), inline: true },
+          { name: 'Level', value: fmtLevel(player), inline: true },
+          { name: 'Job', value: fmtJob(player), inline: true },
         )
         .setFooter({
           text:
@@ -233,6 +237,7 @@ async function maybeNotifyGuild(
       continue;
     }
 
+    const player = latestByPlayerId.get(c.playerId);
     const embed = new EmbedBuilder()
       .setTitle('📝 改名')
       .setDescription(`**${c.beforeName}** → **${c.afterName}**`)
@@ -240,6 +245,8 @@ async function maybeNotifyGuild(
         { name: 'Player ID', value: c.playerId, inline: true },
         { name: 'Before Guild', value: fmtGuild(c.beforeGuild), inline: true },
         { name: 'After Guild', value: fmtGuild(c.afterGuild), inline: true },
+        { name: 'Level', value: fmtLevel(player), inline: true },
+        { name: 'Job', value: fmtJob(player), inline: true },
       )
       .setFooter({
         text:
@@ -263,6 +270,14 @@ async function maybeNotifyGuild(
 
 function fmtGuild(g: string | null) {
   return g ?? 'なし';
+}
+
+function fmtLevel(player: ScrapedPlayer | undefined) {
+  return player?.level ? String(player.level) : '不明';
+}
+
+function fmtJob(player: ScrapedPlayer | undefined) {
+  return player?.job?.trim() || '不明';
 }
 
 // 判定 guild 事件动作
