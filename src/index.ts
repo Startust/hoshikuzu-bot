@@ -9,10 +9,6 @@ import { enforceAllowlist } from './services/enforceAllowlist';
 const token = process.env.DISCORD_TOKEN;
 if (!token) throw new Error('DISCORD_TOKEN is missing');
 
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('Missing OPENAI_API_KEY');
-}
-
 async function main() {
   const client = new HoshikuzuClient();
   client.once('clientReady', () => {

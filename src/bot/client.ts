@@ -15,13 +15,9 @@ export class HoshikuzuClient extends SapphireClient {
     super({
       // 假设这个文件在 src/bot/client.ts，那么 baseUserDirectory 指向 src
       baseUserDirectory: join(__dirname, '..'),
-      intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-      ],
+      intents: [GatewayIntentBits.Guilds],
       partials: [Partials.Channel],
-      loadMessageCommandListeners: true,
+      loadMessageCommandListeners: false,
     });
   }
 }
