@@ -3,6 +3,32 @@
 This is the retained local-validation snapshot before publication. Hosted CI
 results must be checked separately on the pull request's current commit.
 
+## Publication follow-up
+
+The first [hosted scan](https://github.com/Startust/hoshikuzu-bot/actions/runs/40033663819)
+correctly failed on newly indexed
+[GHSA-v4x8-3wr5-3wq8](https://github.com/advisories/GHSA-v4x8-3wr5-3wq8)
+in filelock 3.29.0. The affected range ends at 4.2.0. The inference lock now
+uses official 4.2.4, accepted by every installed dependent's declared constraints.
+The 4.0 protocol change concerns SoftReadWriteLock; the actual inference
+dependencies use ordinary FileLock wrappers. No shared live lock/cache directory
+was used or migrated.
+
+The isolated 117-package installation passes `pip check`, all eight application/API
+tests (including cross-process exclusion and release through Hugging Face,
+ModelScope and PyTorch lock wrappers), all ten gate tests and all 19 runtime/GPU
+checks. All three synthetic waveforms match the preceding validated environment
+byte for byte. The refreshed 482-entry scan again has zero known advisories.
+
+The unchanged, separately retained 149-package optional-extras profile now has
+**44 unique advisories in four package versions**: Pillow 12.3.0 has 41,
+datasets 3.6.0 one, fsspec 2025.3.0 one, and filelock 3.29.0 one. The two new
+Pillow records are GHSA-5x8w-8jj5-q52h and GHSA-654x-cwwv-5j9c; inference already
+uses their fixed Pillow 13.0.0. This extras profile remains uninstalled and
+unapproved. The 41-advisory result below is the earlier retained snapshot.
+
+## Original local-validation snapshot
+
 The approved local VoxCPM packaging split is built, installed and verified. The
 production-candidate profiles have **zero known OSV advisories** across 356 Node
 lock entries, 117 actually installed Python inference packages and nine actually

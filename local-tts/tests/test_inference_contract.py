@@ -3,11 +3,39 @@ import importlib.metadata
 import inspect
 from pathlib import Path
 import socket
+import subprocess
+import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
 
 class InferenceContractTests(unittest.TestCase):
+    def test_dependency_file_locks_exclude_another_process_and_release(self):
+        with patch.object(socket.socket, 'connect', side_effect=AssertionError('Network forbidden')):
+            from filelock import FileLock
+            from huggingface_hub.utils import WeakFileLock
+            from modelscope.hub.utils.utils import weak_file_lock
+            from torch.utils._filelock import FileLock as TorchFileLock
+            contender = '''
+import sys
+from filelock import FileLock, Timeout
+try:
+    with FileLock(sys.argv[1], timeout=0.1):
+        pass
+except Timeout:
+    sys.exit(17)
+'''
+            with tempfile.TemporaryDirectory() as directory:
+                for index, wrapper in enumerate((WeakFileLock, weak_file_lock, TorchFileLock)):
+                    with self.subTest(wrapper=wrapper.__name__):
+                        path = Path(directory) / f'fixture-{index}.lock'
+                        with wrapper(str(path), timeout=1):
+                            result = subprocess.run([sys.executable, '-I', '-c', contender, str(path)], capture_output=True, text=True, timeout=15)
+                            self.assertEqual(result.returncode, 17, result.stderr)
+                        with FileLock(path, timeout=1):
+                            pass
+
     def test_optional_training_ui_are_absent_and_marked_optional(self):
         from packaging.requirements import Requirement
         dist = importlib.metadata.distribution('voxcpm')

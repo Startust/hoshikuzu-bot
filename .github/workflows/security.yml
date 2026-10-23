@@ -132,5 +132,5 @@ jobs:
 
           GPU synthesis and waveform regression were validated locally only; hosted CI does not run the live bot, TTS batch or GPU/model inference.
 
-          Optional training/Web UI extras are excluded from the inference install. Their separately resolved 149-package profile retained 41 advisories at the 2026-10-23 audit; it is not production-approved or covered by the inference profile's clean result. See docs/inference-package-audit-2026-10-23.md.
+          Optional training/Web UI extras are excluded from the inference install. Their separately resolved 149-package profile retained 44 advisories at the 2026-10-23 publication recheck; it is not production-approved or covered by the inference profile's clean result. See docs/inference-package-audit-2026-10-23.md.
           '@ | Add-Content $env:GITHUB_STEP_SUMMARY

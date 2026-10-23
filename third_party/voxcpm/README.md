@@ -19,8 +19,9 @@ The complete production inference lock installs neither extra. Pillow and fsspec
 remain real inference dependencies and are upgraded to 13.0.0 and 2026.9.0.
 
 **Training and Web UI extras remain unsafe for production.** A separately
-resolved 149-package combined-extras profile still has 41 unique OSV advisories:
-39 in Pillow 12.3.0, one in datasets 3.6.0, and one in fsspec 2025.3.0. That profile
+resolved 149-package combined-extras profile has 44 unique OSV advisories at the
+publication recheck: 41 in Pillow 12.3.0, one in datasets 3.6.0, one in fsspec
+2025.3.0 and one in filelock 3.29.0 (the inference lock uses fixed 4.2.4). That profile
 was scanned but not installed or functionally validated. Selecting extras against
 the production lock requires a new dependency review and separate environment;
 do not force overrides or install them into the inference environment.
