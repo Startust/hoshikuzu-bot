@@ -1,0 +1,4 @@
+third_party/voxcpm/* text eol=lf
+local-tts/requirements*.txt text eol=lf
+# Unified diffs encode empty context lines as one space; preserve patch bytes.
+third_party/voxcpm/*.patch whitespace=-blank-at-eol

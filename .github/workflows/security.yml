@@ -1,0 +1,136 @@
+name: Dependency security
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 6 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  osv:
+    name: Full OSV inventory gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+      - name: Install gate parser
+        run: python -m pip install packaging==26.2
+      - name: Install verified OSV-Scanner 2.7.0
+        shell: bash
+        run: |
+          curl --fail --location --retry 3 https://github.com/google/osv-scanner/releases/download/v2.7.0/osv-scanner_linux_amd64 -o "$RUNNER_TEMP/osv-scanner"
+          echo "160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b  $RUNNER_TEMP/osv-scanner" | sha256sum --check
+          chmod +x "$RUNNER_TEMP/osv-scanner"
+      - name: Scan every locked dependency and enforce coverage
+        run: python scripts/security_scan.py --scanner "$RUNNER_TEMP/osv-scanner"
+      - name: Publish complete reports even when the gate fails
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: osv-reports-${{ github.run_id }}-${{ github.run_attempt }}
+          path: security-reports/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Summarize coverage and findings
+        if: always()
+        shell: bash
+        run: |
+          if test -f security-reports/summary.md; then
+            cat security-reports/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  verify:
+    name: Offline regression tests and lock consistency
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: mysql://audit:audit@127.0.0.1:1/audit
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+      - name: Locked Node installation and local checks
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          npm install --global yarn@1.22.22
+          yarn install --frozen-lockfile --ignore-scripts --non-interactive
+          yarn prisma:generate
+          yarn typecheck
+          yarn build
+          yarn lint
+          yarn test
+      - name: Build hash-verified local VoxCPM package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          python -m venv .build-voxcpm
+          .\.build-voxcpm\Scripts\python.exe -m pip install --disable-pip-version-check -r third_party/voxcpm/build-requirements-lock.txt
+          .\.build-voxcpm\Scripts\python.exe third_party/voxcpm/build_local.py --output "$env:RUNNER_TEMP/voxcpm-wheel" --cache "$env:RUNNER_TEMP/voxcpm-source"
+          python -m venv .inference-venv
+          .\.inference-venv\Scripts\python.exe -m pip install --disable-pip-version-check "$env:RUNNER_TEMP/voxcpm-wheel/voxcpm-2.0.3+hoshikuzu.1-py3-none-any.whl" -r local-tts/requirements-lock.txt --extra-index-url https://download.pytorch.org/whl/cu130
+          .\.inference-venv\Scripts\python.exe -m pip check
+      - name: Install verified Windows OSV-Scanner 2.7.0
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://github.com/google/osv-scanner/releases/download/v2.7.0/osv-scanner_windows_amd64.exe -OutFile "$env:RUNNER_TEMP/osv-scanner.exe"
+          if ((Get-FileHash "$env:RUNNER_TEMP/osv-scanner.exe" -Algorithm SHA256).Hash.ToLowerInvariant() -ne '9964ed64ec9a387391eb4cc006ad5c531154821aef29b793e02c448de4686438') { throw 'OSV scanner hash mismatch' }
+      - name: Scan actual installed inference and builder closures
+        shell: pwsh
+        run: |
+          .\.inference-venv\Scripts\python.exe scripts/security_scan.py --scanner "$env:RUNNER_TEMP/osv-scanner.exe" --installed-python .inference-venv/Scripts/python.exe --installed-build-python .build-voxcpm/Scripts/python.exe --report-dir security-reports-installed
+      - name: Offline TTS and fail-closed gate tests
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          .\.inference-venv\Scripts\python.exe -m unittest discover -s local-tts/tests -v
+          .\.inference-venv\Scripts\python.exe -m unittest discover -s scripts/tests -v
+      - name: Retain installed inventories, provenance and full scans
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: installed-security-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            security-reports-installed/
+            third_party/voxcpm/
+            ${{ runner.temp }}/voxcpm-wheel/build-provenance.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Summarize installed coverage and validation limits
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path security-reports-installed/summary.md) {
+            Get-Content security-reports-installed/summary.md | Add-Content $env:GITHUB_STEP_SUMMARY
+          }
+          @'
+
+          Hosted Windows CI builds the reviewed inference package, installs its complete lock and build tools, scans actual installed inventories, and runs offline Node and Python tests.
+
+          GPU synthesis and waveform regression were validated locally only; hosted CI does not run the live bot, TTS batch or GPU/model inference.
+
+          Optional training/Web UI extras are excluded from the inference install. Their separately resolved 149-package profile retained 44 advisories at the 2026-10-23 publication recheck; it is not production-approved or covered by the inference profile's clean result. See docs/inference-package-audit-2026-10-23.md.
+          '@ | Add-Content $env:GITHUB_STEP_SUMMARY

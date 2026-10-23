@@ -9,11 +9,14 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
   },
   "dependencies": {
-    "@prisma/adapter-mariadb": "^7.2.0",
-    "@prisma/client": "^7.2.0",
+    "@prisma/adapter-mariadb": "^7.10.1",
+    "@prisma/client": "^7.10.1",
     "@sapphire/decorators": "^6.2.0",
     "@sapphire/framework": "^5.5.0",
     "@sapphire/plugin-scheduled-tasks": "^10.0.4",
@@ -21,7 +24,7 @@
     "cheerio": "^1.1.2",
     "discord.js": "14.26.4",
     "dotenv": "^17.2.3",
-    "undici": "7.27.2"
+    "undici": "7.30.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
@@ -30,22 +33,24 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "prettier": "^3.7.4",
-    "prisma": "^7.2.0",
+    "prisma": "^7.10.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.51.0"
   },
   "resolutions": {
     "@discordjs/builders": "1.14.1",
-    "@discordjs/ws/**/undici": "6.24.1",
-    "cheerio/undici": "7.27.2",
-    "discord.js/@discordjs/ws/**/undici": "6.24.1",
+    "@discordjs/ws/**/undici": "6.29.1",
+    "cheerio/undici": "7.30.1",
+    "discord.js/@discordjs/ws/**/undici": "6.29.1",
     "lodash": "4.18.1",
     "uuid": "11.1.1",
-    "ws": "8.21.0"
+    "ws": "8.21.0",
+    "discord.js/undici": "6.29.1"
   },
   "license": "MIT",
   "engines": {
     "node": "24.22.1"
-  }
+  },
+  "packageManager": "yarn@1.22.22"
 }
