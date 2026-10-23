@@ -121,3 +121,7 @@ npm exec tsc -- --noEmit
 npm run lint
 .\local-tts\.venv\Scripts\python.exe -m py_compile .\local-tts\generate_pronunciations.py
 ```
+
+## Node runtime
+
+Use Node.js 24.22.1 (`.nvmrc`). The exact `engines.node` pin also selects the Railway build/runtime version. Keep the pin on a patched Node 24 release; changing only the local interpreter does not update deployed containers.
