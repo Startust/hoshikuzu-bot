@@ -17,7 +17,16 @@ From this folder:
 .\scripts\setup.ps1
 ```
 
-This creates `.venv` and installs PyTorch CUDA 12.8 plus VoxCPM dependencies.
+This creates `.venv` and installs the pinned Windows/Python 3.11 dependency set
+with PyTorch CUDA 13.0. GPU execution requires NVIDIA driver 580 or newer.
+TorchCodec audio decoding also requires FFmpeg shared DLLs; an ordinary static
+`ffmpeg.exe` is insufficient. The isolated validator accepts `--ffmpeg-bin` to
+load those DLLs for its own process without changing system PATH.
+See the [inference-only audit](../docs/inference-package-audit-2026-10-23.md) for
+verified versions and runtime evidence. This candidate uses a hash-verified local
+VoxCPM packaging variant; training and Web UI extras remain vulnerable and are
+not installed. Setup requires fresh runtime/build environments and preserves
+existing ones. The candidate has not been deployed to the live TTS environment.
 The first run may download model weights and can take a while.
 Model files are stored under `data\models\VoxCPM2` to avoid Windows symlink
 issues in the default Hugging Face cache.

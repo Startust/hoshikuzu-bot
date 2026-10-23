@@ -114,6 +114,14 @@ See [local-tts/README.md](local-tts/README.md) for:
 
 ## Validation
 
+Dependency security checks and the current local remediation limits are documented
+in [the inference-only package audit](docs/inference-package-audit-2026-10-23.md),
+with the original baseline in [the first-phase audit](docs/security-audit-2026-10-23.md).
+The security workflow fails on every known advisory in the complete Node,
+Python inference and package-build profiles, and retains complete scan reports.
+Optional training/Web UI extras remain vulnerable and are documented separately;
+they are not installed or approved for production inference.
+
 Useful checks before shipping:
 
 ```powershell

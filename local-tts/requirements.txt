@@ -1,8 +1,8 @@
 pydantic==2.10.4
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 soundfile==0.12.1
 numpy>=1.26,<3
-voxcpm
+voxcpm==2.0.3+hoshikuzu.1
 pypinyin==0.53.0
 mysql-connector-python==9.1.0
 SudachiPy>=0.6,<0.7
