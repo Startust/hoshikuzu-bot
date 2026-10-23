@@ -99,7 +99,7 @@ test('Discord uses patched Undici 6 and its fetch works with a separate mock dis
   const require = createRequire(import.meta.url);
   const discordRequire = createRequire(require.resolve('discord.js'));
   const undici = discordRequire('undici') as typeof Undici;
-  assert.equal(discordRequire('undici/package.json').version, '6.28.1');
+  assert.equal(discordRequire('undici/package.json').version, '6.29.1');
   const mock = new undici.MockAgent();
   mock.disableNetConnect();
   mock

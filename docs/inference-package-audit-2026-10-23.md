@@ -27,6 +27,19 @@ Pillow records are GHSA-5x8w-8jj5-q52h and GHSA-654x-cwwv-5j9c; inference alread
 uses their fixed Pillow 13.0.0. This extras profile remains uninstalled and
 unapproved. The 41-advisory result below is the earlier retained snapshot.
 
+The [next hosted scan](https://github.com/Startust/hoshikuzu-bot/actions/runs/40034289455)
+captured three more newly indexed Undici advisories, represented by five
+package/advisory pairs across its two installed versions:
+GHSA-4qv8-2p9j-2685, GHSA-xjj6-f33q-929c and GHSA-f72v-6w45-q472.
+Discord's separate major-6 copy is now 6.29.1; direct/Cheerio major 7 is now
+7.30.1. These are upstream fixes within the existing major versions. Prisma
+generation against a dummy unreachable DB URL, typecheck, build, lint and all
+six offline Node tests pass again. Failed hosted reports remain available on
+their original runs; no advisory was ignored to make the gate pass.
+Deduplicating the major-6 entries leaves 355 distinct Node package versions.
+The latest complete local scan covers **481 profile entries** (355 Node, 117
+installed inference and nine installed build tools), with zero known advisories.
+
 ## Original local-validation snapshot
 
 The approved local VoxCPM packaging split is built, installed and verified. The
