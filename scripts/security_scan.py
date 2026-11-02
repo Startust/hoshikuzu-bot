@@ -1,4 +1,4 @@
-"""Full OSV gate. Any finding, extraction gap, malformed report or tool failure fails."""
+"""Full OSV inventory; only proven check-only paths may remain as warnings."""
 import argparse
 import hashlib
 import json
@@ -10,6 +10,7 @@ import urllib.request
 
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
+from node_usage_policy import classify_findings, load_usage_graph
 
 
 def python_inventory(lock):
@@ -87,7 +88,7 @@ def query_upstream_commit(provenance, output):
         raise ValueError("Malformed upstream commit query")
     findings = []
     for vuln in report.get("vulns", []):
-        if not isinstance(vuln.get("id"), str):
+        if not isinstance(vuln.get("id"), str) or not vuln["id"].strip():
             raise ValueError("Malformed upstream commit advisory")
         findings.append({"source": "upstream-git", "package": "voxcpm", "version": provenance["commit"], "id": vuln["id"], "aliases": vuln.get("aliases", []), "summary": vuln.get("summary", "")})
     return findings
@@ -148,7 +149,7 @@ def validate_report(report, expected):
             if not isinstance(vulns, list):
                 raise ValueError("Malformed vulnerabilities")
             for vuln in vulns:
-                if not isinstance(vuln.get("id"), str):
+                if not isinstance(vuln.get("id"), str) or not vuln["id"].strip():
                     raise ValueError("Malformed advisory")
                 findings.append({"source": filename, "package": name, "version": package["version"], "id": vuln["id"], "aliases": vuln.get("aliases", []), "summary": vuln.get("summary", "")})
     for name, wanted in expected.items():
@@ -159,9 +160,11 @@ def validate_report(report, expected):
 
 def run_gate(repo, output, scanner, installed_python=None, installed_build_python=None):
     output.mkdir(parents=True, exist_ok=True)
+    (output / "dependency-usage.json").unlink(missing_ok=True)
     summary = {"status": "incomplete", "coverage": {}, "limits": [
         "Python lock targets Windows x64 / Python 3.11; reviewed official CUDA +cu128/+cu130 wheels are mapped to upstream versions for OSV matching (including TorchCodec).",
         "Includes every Node lock entry (runtime, dev, optional platforms) and every Python lock entry (runtime and installer tools). No severity threshold or advisory ignore list.",
+        "Only dependency versions whose every reviewed path is lint/check-only are non-blocking warnings. Runtime, build, install hooks, shared use, unknown evidence and scanner errors block.",
         "Does not scan model weights, bundled native libraries, OS packages, live deployments, credentials, or GPU behavior.",
         "Local VoxCPM package maps to its verified unchanged upstream code release and commit; a clean OSV query is not a source-code security review.",
         "Optional training/UI extras are not part of the inference install and remain unsupported for production; their historical findings are retained in the audit evidence.",
@@ -213,25 +216,42 @@ def run_gate(repo, output, scanner, installed_python=None, installed_build_pytho
         report = json.loads((output / "osv.json").read_text(encoding="utf-8-sig"))
         findings = validate_report(report, expected)
         summary["findings"] = findings
+        summary["rawScannerStatus"] = "vulnerabilities" if findings else "clean"
         if re.search(r"failed|error during extraction|unscannable|filtered \d", log, re.I):
             raise ValueError("OSV reported an extraction or scan error; inspect scanner.log")
         if completed.returncode == 1 and not findings:
             raise ValueError("OSV failed without a vulnerability explanation")
+        if completed.returncode == 0 and findings:
+            raise ValueError("OSV exit code contradicts vulnerability report")
         findings.extend(query_upstream_commit(provenance, output))
-        summary["status"] = "vulnerabilities" if findings else "clean"
+        graph = load_usage_graph(repo, expected["yarn.lock"])
+        (output / "dependency-usage.json").write_text(json.dumps(graph, indent=2) + "\n", encoding="utf-8")
+        classified = classify_findings(findings, graph)
+        summary["findings"] = classified
+        summary["usageReview"] = graph["review"]
+        summary["blockingFindings"] = sum(f["disposition"] == "blocking" for f in classified)
+        summary["warningFindings"] = sum(f["disposition"] == "warning" for f in classified)
+        summary["status"] = "vulnerabilities" if summary["blockingFindings"] else "passed-with-warnings" if classified else "clean"
     except Exception as error:
         summary["error"] = str(error)
     finally:
+        summary["gateExit"] = 0 if summary["status"] in {"clean", "passed-with-warnings"} else 1
         (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
-        lines = ["# Dependency security", "", f"Status: **{summary['status']}**", "", f"Coverage: `{json.dumps(summary['coverage'])}`", ""]
+        lines = ["# Dependency security", "", f"Policy status: **{summary['status']}**; gate exit: **{summary['gateExit']}**", "",
+                 f"Raw OSV status: **{summary.get('rawScannerStatus', 'incomplete')}**; scanner exit: **{summary.get('scannerExit', 'not completed')}**. A passing policy does not mean zero vulnerabilities.", "",
+                 f"Blocking records: **{summary.get('blockingFindings', 'unclassified')}**; warning records: **{summary.get('warningFindings', 'unclassified')}**.", "",
+                 f"Coverage: `{json.dumps(summary['coverage'])}`", ""]
         if "error" in summary:
             lines.extend([f"Error: {summary['error']}", ""])
         lines.extend(f"- {limit}" for limit in summary["limits"])
         lines.extend(["", "## All advisory records (aliases remain in the full JSON)", ""])
-        lines.extend(f"- {f['source']}: {f['package']}@{f['version']} — [{f['id']}](https://osv.dev/{f['id']})" for f in summary.get("findings", []))
+        for finding in summary.get("findings", []):
+            lines.append(f"- **{finding.get('disposition', 'unclassified/blocking')}** {finding['source']}: {finding['package']}@{finding['version']} — [{finding['id']}](https://osv.dev/vulnerability/{finding['id']})")
+            for root, route in finding.get('rootPaths', {}).items():
+                lines.append(f"  - {route['role']} root `{root}`: `{' -> '.join(route['path'])}`")
         (output / "summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(json.dumps({k: v for k, v in summary.items() if k != "findings"}, indent=2))
-    return 0 if summary["status"] == "clean" else 1
+    return summary["gateExit"]
 
 
 if __name__ == "__main__":

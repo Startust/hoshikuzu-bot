@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 spec = importlib.util.spec_from_file_location("security_scan", Path(__file__).resolve().parents[1] / "security_scan.py")
 gate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gate)
@@ -77,6 +78,12 @@ class GateTests(unittest.TestCase):
         report = {"results": [{"source": {"path": "yarn.lock"}, "packages": [{"package": {"name": "fixture", "version": "1.0.0", "ecosystem": "npm"}, "vulnerabilities": [{"id": "GHSA-fixture", "aliases": ["CVE-fixture"]}]}]}]}
         findings = gate.validate_report(report, {"yarn.lock": {("fixture", "1.0.0")}})
         self.assertEqual(findings[0]["aliases"], ["CVE-fixture"])
+
+    def test_empty_and_non_string_advisory_identifiers_fail(self):
+        for identifier in ('', '   ', 7, {}):
+            report = {"results": [{"source": {"path": "yarn.lock"}, "packages": [{"package": {"name": "fixture", "version": "1.0.0", "ecosystem": "npm"}, "vulnerabilities": [{"id": identifier}]}]}]}
+            with self.assertRaisesRegex(ValueError, 'Malformed advisory'):
+                gate.validate_report(report, {"yarn.lock": {('fixture', '1.0.0')}})
 
     def test_unpinned_python_and_manifest_drift_fail(self):
         with tempfile.TemporaryDirectory() as temp:

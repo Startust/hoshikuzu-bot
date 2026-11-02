@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-11-02",
+  "reviewScope": "Reviewed lint-only roots; no vulnerability identifiers or package-name exemptions. Changes to executable inputs require a fresh review.",
+  "rootUsage": {
+    "@prisma/adapter-mariadb": {
+      "role": "runtime",
+      "evidence": "Declared production dependency; all transitive paths remain blocking."
+    },
+    "@prisma/client": {
+      "role": "runtime",
+      "evidence": "Declared production dependency; all transitive paths remain blocking."
+    },
+    "@sapphire/decorators": {
+      "role": "runtime",
+      "evidence": "Declared production dependency; all transitive paths remain blocking."
+    },
+    "@sapphire/framework": {
+      "role": "runtime",
+      "evidence": "Declared production dependency; all transitive paths remain blocking."
+    },
+    "@sapphire/plugin-scheduled-tasks": {
+      "role": "runtime",
+      "evidence": "Declared production dependency; all transitive paths remain blocking."
+    },
+    "@sapphire/plugin-subcommands": {
+      "role": "runtime",
+      "evidence": "Declared production dependency; all transitive paths remain blocking."
+    },
+    "cheerio": {
+      "role": "runtime",
+      "evidence": "Declared production dependency; all transitive paths remain blocking."
+    },
+    "discord.js": {
+      "role": "runtime",
+      "evidence": "Declared production dependency; all transitive paths remain blocking."
+    },
+    "dotenv": {
+      "role": "runtime",
+      "evidence": "Declared production dependency; all transitive paths remain blocking."
+    },
+    "undici": {
+      "role": "runtime",
+      "evidence": "Declared production dependency; all transitive paths remain blocking."
+    },
+    "@eslint/js": {
+      "role": "check-only",
+      "evidence": "Reviewed package scripts lint/lint:fix and eslint.config.mjs imports. No src/prisma/runtime/build import. Build uses tsc; Prisma generator separate. Full executable-input snapshot binds this audit."
+    },
+    "@types/node": {
+      "role": "build",
+      "evidence": "build=tsc emits runtime JavaScript/declarations; tsconfig.json selects node types. The same compiler also typechecks, so overlap blocks."
+    },
+    "eslint": {
+      "role": "check-only",
+      "evidence": "Reviewed package scripts lint/lint:fix and eslint.config.mjs imports. No src/prisma/runtime/build import. Build uses tsc; Prisma generator separate. Full executable-input snapshot binds this audit."
+    },
+    "eslint-config-prettier": {
+      "role": "check-only",
+      "evidence": "Reviewed package scripts lint/lint:fix and eslint.config.mjs imports. No src/prisma/runtime/build import. Build uses tsc; Prisma generator separate. Full executable-input snapshot binds this audit."
+    },
+    "eslint-plugin-simple-import-sort": {
+      "role": "check-only",
+      "evidence": "Reviewed package scripts lint/lint:fix and eslint.config.mjs imports. No src/prisma/runtime/build import. Build uses tsc; Prisma generator separate. Full executable-input snapshot binds this audit."
+    },
+    "prettier": {
+      "role": "unknown",
+      "evidence": "Formatter or other development utility is outside approved lint/type-check-only category; conservatively blocking."
+    },
+    "prisma": {
+      "role": "build",
+      "evidence": "postinstall/prisma:generate generate runtime client; migration scripts are operational. No downgrade."
+    },
+    "tsx": {
+      "role": "runtime",
+      "evidence": "package scripts start and dev execute src/index.ts through tsx; test runner also uses tsx."
+    },
+    "typescript": {
+      "role": "build",
+      "evidence": "build=tsc emits runtime JavaScript/declarations; tsconfig.json selects node types. The same compiler also typechecks, so overlap blocks."
+    },
+    "typescript-eslint": {
+      "role": "check-only",
+      "evidence": "Reviewed package scripts lint/lint:fix and eslint.config.mjs imports. No src/prisma/runtime/build import. Build uses tsc; Prisma generator separate. Full executable-input snapshot binds this audit."
+    }
+  },
+  "reviewedInputs": {
+    ".env.example": "48e196def7ab80a3aa59d31e7cd83469aac3ffa140837173c9bb0159355c0701",
+    ".gitattributes": "79aa43c872d51c30ef5f3bcdc58a3e0472ff16d553d9ec13bc32607058aa2e53",
+    ".github/workflows/security.yml": "c9d8ee329a64eee9552e84e4b76fc27595c5a23dde9d6473ad390e57718b385d",
+    ".gitignore": "37e0c44a88f5378ccf311052aee90ba6afc8498d0c7fd251b1645e2cde3dd9ea",
+    ".nvmrc": "d9f318747a126ce2247661af67852b185def7789492eabfad7bba322be087c33",
+    ".prettierignore": "98e273bb4cfa752a89fa0ceca88a26cda74cd266762bfa06df766c687105970a",
+    ".prettierrc": "2b35a8a2bb44eff523989300375d171a53994863f7b3084d095871a81b1ed832",
+    "LICENSE": "0f7296fe59f4c9d4455e64e5b052edbc6def0466e5d0974bfc4f305b6b31496c",
+    "eslint.config.mjs": "12d28f658caf1765f8da30fe7f2d287b935c5a3d74fa3b0a1587a57de1a189e4",
+    "local-tts/.env.example": "89447750a2a3ec3c68db731f06580abdcf2d0aefcc8ed8548f17a1216ede6290",
+    "local-tts/data/.gitignore": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
+    "local-tts/generate_pronunciations.py": "85a28ba454594303bbea2ea9ee91c09d128190b47222f24ece0767ea13bb0b18",
+    "local-tts/requirements-lock.txt": "0be9baf7d6f1119327a4d0f511232d7836866e46a8698aff1d7a50c968279364",
+    "local-tts/requirements.txt": "14a721ea4519d53e7882a3fbcb24899e4524949e80220e6e208e1e2c42409cc1",
+    "local-tts/scripts/install-scheduled-task.ps1": "a9a007d1340d804b3fb954ae33f6635952865cd209c533772ad9e11bedd14925",
+    "local-tts/scripts/run-once.cmd": "b91af3da1adbb2e0dc8f8ac3a51255f38c52f00be50ee3af07db101bff277e31",
+    "local-tts/scripts/run-once.ps1": "7f9c528301c0a5c5fb5c1d83841ac5956dd05f6a7943ff1008e5588215b888eb",
+    "local-tts/scripts/setup.ps1": "a1c9b81802f41a5969e6d6defbf9965bcc7536bf8aaf8b89076c2b11e1ebaf7f",
+    "local-tts/scripts/uninstall-scheduled-task.ps1": "e5468ffcc140be5017810ffb23404b2187ce570c1b4981e867312a858d92a310",
+    "local-tts/scripts/validate-runtime.py": "b91f2d12910f5b4951b9e68662ce75199be47f7de3992b1a59f57186ca1fe811",
+    "local-tts/tests/test_inference_contract.py": "ca161653aa4b04d18ba5aff0f681131d10d1f7d75a93f6b70c8909e3296628f7",
+    "local-tts/tests/test_pronunciations.py": "298639c2ad98c4c50c208938d5a23f277d8b319b963d41895ae1673172690714",
+    "package.json": "5618cfedd0a9daf629bf39b29be0773b6c2163437c44f59383edbcb369d9e08d",
+    "prisma.config.ts": "8e420dcd0e4b66e81c05b9a9a430dccdd060abc104375f00d926dffce0a145d4",
+    "prisma/migrations/20260118150335_init/migration.sql": "ae769b21f3fc4d02b618645b1d302d55e2a76cc81924f6014d7e15ffa46ead1f",
+    "prisma/migrations/20260118151927_add_page_cache/migration.sql": "a76b2e3a16aed9d47d5ff28b105d472b0e9c82324def34870b0c6a2b053d3978",
+    "prisma/migrations/20260118153844_case_sensitive_username/migration.sql": "5df0ab5db8bf727dd40bb1fee67ac167273f1fd0d732c9aa4980ad470ab39cae",
+    "prisma/migrations/20260118164101_add_ranking_event/migration.sql": "77af36508eb73e6b7acf800b6d89494f8c80ba08f56b0aca385f2098cc94a110",
+    "prisma/migrations/20260118164234_case_sensitive_username/migration.sql": "388f847e0174fc1cab7c854e8c4be9ddc5d5ecdf23d1853b6af5ca46b59964f6",
+    "prisma/migrations/20260118224849_add_guild_table/migration.sql": "8f2ab90f1a30f4cc20dc2aa8680f908a801b7136e8ac7b0d429ae34581ca498a",
+    "prisma/migrations/20260118224908_case_sensitive_guild_name/migration.sql": "35118307327e06e36a537c04afa1cf1fff7aba8307bc3cc7027eb25a59cb3f54",
+    "prisma/migrations/20260119103630_add_guild_white_list/migration.sql": "a98fcb61383073953a1c56cd0b8c5eeeebb92467f6086ad59cef4d9f3beef319",
+    "prisma/migrations/20260119194905_enhance_page_cache/migration.sql": "5ecd8e4ed92e6005f12e5ebf0c47a1584de3160fc7fd1fd066944a040117cfb2",
+    "prisma/migrations/20260604120000_player_id_and_server_25/migration.sql": "77c0d0a589bdc455ba8d1f4a82a05948bddc85c998b9dd638ba323755fb42430",
+    "prisma/migrations/20260606173000_add_guild_member_snapshot/migration.sql": "4c1c2a8001455dedf1dcd29a684e262372128a7103248f5ec78e3ab141be29bf",
+    "prisma/migrations/20260611140000_add_player_name_pronunciation/migration.sql": "80d3ff72c1dff1efe8710869de82b6506917e2dfbbfd79bdce7efbe0d235bcad",
+    "prisma/migrations/migration_lock.toml": "2af88c61808da511e8e7c9473df57bfbd81684b7f0f72309a9d2bdbf8aaf2dbb",
+    "prisma/schema.prisma": "08ce6a327c8baedee0c473ebab6ec2478bce2a9c16f87355467bcfad05f42504",
+    "scripts/node-package-metadata.json": "29e3cdd62adb9b84ebbcf00eba41e95a3ee8edba5d2ef2e539978e55e9bdc90f",
+    "scripts/node_usage_policy.py": "10866dbc08410401a7f76414a05c7a022b6dc47259dc5fee1f807422cc255666",
+    "scripts/python_inventory_probe.py": "fa975eaf5cc8883d265dafeab6e949c70d6156c4b0debc8f4c1999e071ab7e79",
+    "scripts/security_scan.py": "06069cf8448985849a76cfd5ed9fb2e5c09827b0a788989e96c97c393666bbbf",
+    "scripts/tests/test_node_usage_policy.py": "6b2e350c2d6bd1767ec1cb0bd92391a209366c0bc5706cfa9dc5f228e2ef8862",
+    "scripts/tests/test_security_scan.py": "d714a80d72e90db18067b2fe5c758d856114c0e32707ec357938a89c32569599",
+    "src/bot/client.ts": "e1029f9c3a7227eb6278bf3cfba66a7c885ef4aac2c65f63a770dc191664ac02",
+    "src/bot/flyff-poller.ts": "10eeef3441aa9a80f1de3da6b9cdbc6121440ea8ba9e7a9559226d80d5f8cd1a",
+    "src/commands/allowlist.ts": "c552578ced69f6b7503f4c329874679d5b706ea6c2d439a623ad34fa8fb60924",
+    "src/commands/guild.ts": "43ca4e7b13eba2c7875f69970b4ea4019013fb346b38ad5ad0d2b2e323086f82",
+    "src/commands/rank.ts": "22bcb9318aa121b5e2c7990799701d842de7b3a5446869405f47186a37066753",
+    "src/db/prisma.ts": "fc2dd3153147e02e25c521ae63df3b1d153e8606ba18977151342f5ce8c0c881",
+    "src/discord/autoClearCommands.ts": "a8c58f1a2b3a120e19199029bd515d49929c33511b402d3fb1854b5f1d735932",
+    "src/index.ts": "d281edfdfa429d041a160439572c7975ce0c2595863a299dc92018078758a55a",
+    "src/listeners/chatInputCommandError.ts": "6210bceb0a1033258aa0e1a1c433bc49aa4bd5e7e62acc32c6ea887e95042059",
+    "src/listeners/guildCreateListener.ts": "fa20834f29cda8cff68fb8ee330ca7ac1b443d4b21f277fc6d33897e5da07bf9",
+    "src/listeners/interactionCreateDebug.ts": "9d4fcb50ebda6e99dd88b7c55239ee96cd4000d6d8f163f1025f4234b93fc70b",
+    "src/services/enforceAllowlist.ts": "82a9500f24735ba896d7d499cdaa22d635915fd5545d74c069ec8d3b3ab50565",
+    "src/services/flyffRanking/constants.ts": "b465f6c6917de308f3a33e1195f37552837b7c7ee05ee4dcc53cd0d4fda0129a",
+    "src/services/flyffRanking/diff.ts": "2d5a5774f45fd84709a042f466018a132a6d58aed0459f0f2840dfbfbfc4e284",
+    "src/services/flyffRanking/scrape.ts": "7fa25b5c7494d549ebb292207e14fa9efead8815be7383b1f7608f34f6b75e7d",
+    "src/services/flyffRanking/store.ts": "b938a6c8e993170744dee452a3e0411aa416be7c46ca7cc8263d061f8e033bbd",
+    "src/services/guildAllowList.ts": "ffc5b62cf72d1966f4dc0a8816cbf015203ae79a6b54a44fc5ef0b21ef759be6",
+    "src/services/playerNamePronunciation.ts": "145c93dd074790082b751844d3abc5f69fe18ab2a2b1bb599df5857be5fa4a81",
+    "tests/dependencies.test.ts": "fdb2aa74599896e9a2a789ef2cee5e66b66199eb179fcd0208dc1ed0025a7c0c",
+    "third_party/voxcpm/LICENSE": "4f10acc209addacfad28293315c74c4cd648f771ee1263a748f1781d1e0265e4",
+    "third_party/voxcpm/build-requirements-lock.txt": "af890c994ba7d0604e1213a753c027622709037a67cfba95d5746d9195511766",
+    "third_party/voxcpm/build-requirements.in": "2598f25955ef669c86aad45d456bbcbb5401e776c6c3472ade1f66f96e951cd3",
+    "third_party/voxcpm/build_local.py": "0425f635bc923ceb3ac0c80b9e4f93f837e0d6a2142f26e2fd135d9d5b105aad",
+    "third_party/voxcpm/inference-extras.patch": "19a37cabbbb80842315bff46749b074520ea2602cacb3dabaaf43ee1f76791c9",
+    "third_party/voxcpm/upstream.json": "6fd7a7edfa50ea4beb919eae56ea72982f675ef85ea61fe598cfcf6002c267fe",
+    "tsconfig.json": "a9da03edf773574da4e4163ece4b6253b9aec6888bee52283b33258eae3d7444",
+    "yarn.lock": "2e64a3f4a7132aafd5dd2df63ebab63b7f835445641641986fcd064a14cb45aa"
+  }
+}
