@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "yarnLockSha256": "2e64a3f4a7132aafd5dd2df63ebab63b7f835445641641986fcd064a14cb45aa",
+  "yarnLockSha256": "819d355c688ca9d059a059498b7ceb377b11fcadb5e4261a687c99d862e472e3",
   "packages": {
     "@discordjs/builders@1.14.1": {
       "name": "@discordjs/builders",
@@ -792,6 +792,22 @@
       "integrity": "sha512-UmeW7z4LfctwoQ5wkhVzgq8tXkreED2xZGpX+Bg+zA+WJFZCT6c062AfCK/Dfk81xZnnwdhJCUMkitihRaoC2Q==",
       "source": "https://registry.npmjs.org/%40ioredis%2Fcommands/1.10.0",
       "tarball": "https://registry.yarnpkg.com/@ioredis/commands/-/commands-1.10.0.tgz",
+      "bindingGyp": false,
+      "bundledPackages": false
+    },
+    "@isaacs/nonrecursive-glob-match@1.1.0": {
+      "name": "@isaacs/nonrecursive-glob-match",
+      "version": "1.1.0",
+      "dependencies": {},
+      "optionalDependencies": {},
+      "peerDependencies": {},
+      "peerDependenciesMeta": {},
+      "lifecycleScripts": {
+        "prepare": "tshy && bash scripts/build.sh"
+      },
+      "integrity": "sha512-GPm/Dbvk5RLmhRnxXIa7nTpK0xtl4E0wj0MslsuNiJ1FIROU+2+9lgUC/dgF7Ey4QCWhfEsgxilMRMCdHPfDfw==",
+      "source": "https://registry.npmjs.org/%40isaacs%2Fnonrecursive-glob-match/1.1.0",
+      "tarball": "https://registry.yarnpkg.com/@isaacs/nonrecursive-glob-match/-/nonrecursive-glob-match-1.1.0.tgz",
       "bindingGyp": false,
       "bundledPackages": false
     },
@@ -2572,9 +2588,9 @@
       "bindingGyp": false,
       "bundledPackages": false
     },
-    "brace-expansion@5.0.12": {
+    "brace-expansion@5.0.13": {
       "name": "brace-expansion",
-      "version": "5.0.12",
+      "version": "5.0.13",
       "dependencies": {
         "balanced-match": "^4.0.2"
       },
@@ -2584,9 +2600,9 @@
       "lifecycleScripts": {
         "prepare": "tshy"
       },
-      "integrity": "sha512-YovQ3rzhaLMIrDjNDMkNS01tea93qhEhG5xy8f6+R0l+dw3Ki+5sCoIoI942iuLZTHWogWktgwVDhU09iNEimQ==",
-      "source": "https://registry.npmjs.org/brace-expansion/5.0.12",
-      "tarball": "https://registry.yarnpkg.com/brace-expansion/-/brace-expansion-5.0.12.tgz",
+      "integrity": "sha512-Vh3dmFbc4wZeox7M9I/0L9GfFd83Su4+yCck/OF9Gi/P/dAHn0RT7X4K9R7gMNMhDck3DvhR6QXsnQdjjgwNvQ==",
+      "source": "https://registry.npmjs.org/brace-expansion/5.0.13",
+      "tarball": "https://registry.yarnpkg.com/brace-expansion/-/brace-expansion-5.0.13.tgz",
       "bindingGyp": false,
       "bundledPackages": false
     },
@@ -4654,11 +4670,12 @@
       "bindingGyp": false,
       "bundledPackages": false
     },
-    "minimatch@10.2.6": {
+    "minimatch@11.0.8": {
       "name": "minimatch",
-      "version": "10.2.6",
+      "version": "11.0.8",
       "dependencies": {
-        "brace-expansion": "^5.0.8"
+        "@isaacs/nonrecursive-glob-match": "^1.1.0",
+        "brace-expansion": "^5.0.12"
       },
       "optionalDependencies": {},
       "peerDependencies": {},
@@ -4666,9 +4683,9 @@
       "lifecycleScripts": {
         "prepare": "tshy"
       },
-      "integrity": "sha512-vpLQEs+VLCr1nU0BXS07maYoFwlDAH0gngQuuttxIwutDFEMHq2blX+8vpgxDdK3J1PwjCJiep77OitTZ4Ll1A==",
-      "source": "https://registry.npmjs.org/minimatch/10.2.6",
-      "tarball": "https://registry.yarnpkg.com/minimatch/-/minimatch-10.2.6.tgz",
+      "integrity": "sha512-nFQuYSTVrGvysVBps5Ih+0BdnYFN/Cj3C816r6+p7yK+FHrVLGE4O4N9AFwykrlNlvM2HYt+Rad1Uiro6h88Ig==",
+      "source": "https://registry.npmjs.org/minimatch/11.0.8",
+      "tarball": "https://registry.yarnpkg.com/minimatch/-/minimatch-11.0.8.tgz",
       "bindingGyp": false,
       "bundledPackages": false
     },
