@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "reviewedAt": "2026-11-02",
+  "reviewedAt": "2026-11-12",
   "reviewScope": "Reviewed lint-only roots; no vulnerability identifiers or package-name exemptions. Changes to executable inputs require a fresh review.",
   "rootUsage": {
     "@prisma/adapter-mariadb": {
@@ -107,7 +107,7 @@
     "local-tts/scripts/validate-runtime.py": "b91f2d12910f5b4951b9e68662ce75199be47f7de3992b1a59f57186ca1fe811",
     "local-tts/tests/test_inference_contract.py": "ca161653aa4b04d18ba5aff0f681131d10d1f7d75a93f6b70c8909e3296628f7",
     "local-tts/tests/test_pronunciations.py": "298639c2ad98c4c50c208938d5a23f277d8b319b963d41895ae1673172690714",
-    "package.json": "5618cfedd0a9daf629bf39b29be0773b6c2163437c44f59383edbcb369d9e08d",
+    "package.json": "c62d65a861b4cb3c67471ba020f90f8754ed393f42bd88028e9b315a19959573",
     "prisma.config.ts": "8e420dcd0e4b66e81c05b9a9a430dccdd060abc104375f00d926dffce0a145d4",
     "prisma/migrations/20260118150335_init/migration.sql": "ae769b21f3fc4d02b618645b1d302d55e2a76cc81924f6014d7e15ffa46ead1f",
     "prisma/migrations/20260118151927_add_page_cache/migration.sql": "a76b2e3a16aed9d47d5ff28b105d472b0e9c82324def34870b0c6a2b053d3978",
@@ -123,7 +123,7 @@
     "prisma/migrations/20260611140000_add_player_name_pronunciation/migration.sql": "80d3ff72c1dff1efe8710869de82b6506917e2dfbbfd79bdce7efbe0d235bcad",
     "prisma/migrations/migration_lock.toml": "2af88c61808da511e8e7c9473df57bfbd81684b7f0f72309a9d2bdbf8aaf2dbb",
     "prisma/schema.prisma": "08ce6a327c8baedee0c473ebab6ec2478bce2a9c16f87355467bcfad05f42504",
-    "scripts/node-package-metadata.json": "29e3cdd62adb9b84ebbcf00eba41e95a3ee8edba5d2ef2e539978e55e9bdc90f",
+    "scripts/node-package-metadata.json": "a9fc86e4739caecfffffaf1eebae0a2577f4ee0f8362d90db80f9352a0b40881",
     "scripts/node_usage_policy.py": "10866dbc08410401a7f76414a05c7a022b6dc47259dc5fee1f807422cc255666",
     "scripts/python_inventory_probe.py": "fa975eaf5cc8883d265dafeab6e949c70d6156c4b0debc8f4c1999e071ab7e79",
     "scripts/security_scan.py": "06069cf8448985849a76cfd5ed9fb2e5c09827b0a788989e96c97c393666bbbf",
@@ -155,6 +155,6 @@
     "third_party/voxcpm/inference-extras.patch": "19a37cabbbb80842315bff46749b074520ea2602cacb3dabaaf43ee1f76791c9",
     "third_party/voxcpm/upstream.json": "6fd7a7edfa50ea4beb919eae56ea72982f675ef85ea61fe598cfcf6002c267fe",
     "tsconfig.json": "a9da03edf773574da4e4163ece4b6253b9aec6888bee52283b33258eae3d7444",
-    "yarn.lock": "2e64a3f4a7132aafd5dd2df63ebab63b7f835445641641986fcd064a14cb45aa"
+    "yarn.lock": "819d355c688ca9d059a059498b7ceb377b11fcadb5e4261a687c99d862e472e3"
   }
 }
